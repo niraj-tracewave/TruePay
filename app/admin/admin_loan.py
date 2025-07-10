@@ -60,15 +60,32 @@ async def create_loan_application(request: Request, form_data: LoanForm):
         data=response.get("data")
     )
 
+
 @router.put("/update-loan-application/{loan_id}", summary="Update Loan Application")
 async def update_loan_application(request: Request, loan_id: str, form_data: UpdateLoanForm):
     user_state = getattr(request.state, "user", None)
 
-    response = admin_loan_service.update_loan_applications(logged_in_user_id=user_state.get("id"), loan_id=loan_id, form_data=form_data)
+    response = admin_loan_service.update_loan_applications(
+        logged_in_user_id=user_state.get("id"), loan_id=loan_id, form_data=form_data
+    )
 
     return ApiResponse.create_response(
         success=response.get("success"),
         message=response.get("message"),
-        status_code=response.get("status_code") if response.get("status_code") else status.HTTP_200_OK,
+        status_code=response.get("status_code", status.HTTP_200_OK),
+        data=response.get("data")
+    )
+
+
+@router.delete("/delete-loan-application/{loan_id}", summary="Delete Loan Application")
+async def update_loan_application(request: Request, loan_id: str):
+    user_state = getattr(request.state, "user", None)
+
+    response = admin_loan_service.delete_loan_applications(logged_in_user_id=user_state.get("id"), loan_id=loan_id)
+
+    return ApiResponse.create_response(
+        success=response.get("success"),
+        message=response.get("message"),
+        status_code=response.get("status_code", status.HTTP_200_OK),
         data=response.get("data")
     )

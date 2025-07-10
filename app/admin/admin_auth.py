@@ -8,7 +8,7 @@ from models.user import User
 from schemas.auth_schemas import AdminLoginRequest, AddUserRequest, UserUpdateData
 from services.auth_service import AdminAuthService
 
-router = APIRouter(prefix="/admin/user", tags=["User Authentication API's"])
+router = APIRouter(prefix="/admin/user", tags=["Admin Panel User API's"])
 admin_auth_service = AdminAuthService(User)
 
 

@@ -238,7 +238,7 @@ class DBInterface:
         finally:
             session.close()
 
-    def soft_delete(self, filters: List[Any]) -> bool:
+    def soft_delete(self, filters: List[Any], modified_id: Optional[str] = None) -> bool:
         session = DBSession()
         try:
             items = session.query(self.db_class).filter(*filters).all()
@@ -248,6 +248,8 @@ class DBInterface:
             for item in items:
                 item.is_deleted = True
                 item.deleted_at = datetime.now()
+                if modified_id:
+                    item.modified_by = modified_id
 
             session.commit()
             return True

@@ -474,3 +474,33 @@ class AdminLoanService(UserLoanService):
                 "status_code": status.HTTP_400_BAD_REQUEST,
                 "data": {}
             }
+
+    def delete_loan_applications(self, logged_in_user_id: str, loan_id: str) -> Dict[str, Any]:
+        try:
+            loan_application_filter = [LoanApplicant.id == loan_id, LoanApplicant.is_deleted == False]
+            if self.db_interface.soft_delete(loan_application_filter, logged_in_user_id):
+                loan_document_filter = [LoanDocument.applicant_id == loan_id, LoanDocument.is_deleted == False]
+                loan_document_interface = DBInterface(LoanDocument)
+                loan_document_interface.soft_delete(loan_document_filter, logged_in_user_id)
+            else:
+                app_logger.error(f"Error deleting Loan with ID {loan_id}")
+                return {
+                    "success": False,
+                    "message": gettext("not_found").format("Loan Application"),
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "data": {}
+                }
+            return {
+                "success": True,
+                "message": gettext("deleted_successfully").format("Loan Application"),
+                "status_code": status.HTTP_200_OK,
+                "data": {}
+            }
+        except Exception as e:
+            app_logger.error(f"Error deleting Loan with ID {loan_id}: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "message": gettext("something_went_wrong"),
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": {}
+            }
