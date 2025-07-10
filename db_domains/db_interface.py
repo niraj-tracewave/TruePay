@@ -1,5 +1,6 @@
 import operator
-from typing import Any, Optional, Sequence, Dict
+from datetime import datetime
+from typing import Any, Optional, Sequence, Dict, List
 
 from sqlalchemy import and_, or_, not_, desc, asc
 from sqlalchemy.exc import SQLAlchemyError
@@ -28,6 +29,7 @@ class DBInterface:
     def __init__(self, db_model: type[Base]) -> None:
         self.db_class: type[Base] = db_model
 
+    # Get Methods
     def build_filter_expression(self, filter_def: Dict[str, Any]):
         if "AND" in filter_def:
             return and_(*[self.build_filter_expression(f) for f in filter_def["AND"]])
@@ -127,6 +129,7 @@ class DBInterface:
         finally:
             session.close()
 
+    # Create Methods
     def create(self, data: dict[str, Any]) -> Base:
         session: Session = DBSession()
         try:
@@ -141,6 +144,25 @@ class DBInterface:
         finally:
             session.close()
 
+    def bulk_create(self, data_list: list[dict]):
+        session = DBSession()
+        try:
+            instances = [self.db_class(**data) for data in data_list]
+            session.add_all(instances)
+            session.commit()
+
+            # Refresh each instance to load auto-generated fields like id
+            for instance in instances:
+                session.refresh(instance)
+
+            return instances
+        except Exception as e:
+            session.rollback()
+            raise Exception(f"Error in bulk_create for {self.db_class.__name__}: {str(e)}")
+        finally:
+            session.close()
+
+    # Update Methods
     def update(self, _id: str, data: DataObject, lookup_field: str = None, update_all: bool = False) -> Base | list[
         Base] | None:
         session = DBSession()
@@ -199,17 +221,39 @@ class DBInterface:
         finally:
             session.close()
 
+    # Delete Methods
     def delete(self, filters: list) -> bool | Exception | None:
         session = DBSession()
         try:
-            item = session.query(self.db_class).filter(*filters)
-            if item:
-                session.delete(item)
+            items = session.query(self.db_class).filter(*filters).all()
+            if items:
+                for item in items:
+                    session.delete(item)
                 session.commit()
                 return True
             return False
         except Exception as e:
             session.rollback()
             raise Exception(f"Error deleting record from {self.db_class.__name__}: {str(e)}")
+        finally:
+            session.close()
+
+    def soft_delete(self, filters: List[Any]) -> bool:
+        session = DBSession()
+        try:
+            items = session.query(self.db_class).filter(*filters).all()
+            if not items:
+                return False
+
+            for item in items:
+                item.is_deleted = True
+                item.deleted_at = datetime.now()
+
+            session.commit()
+            return True
+
+        except Exception as e:
+            session.rollback()
+            raise Exception(f"Error performing soft delete in {self.db_class.__name__}: {str(e)}")
         finally:
             session.close()

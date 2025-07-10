@@ -7,22 +7,6 @@ class UserRole(str, Enum):
     user = "user"
 
 
-class DocumentType(str, Enum):
-    aadhar = "aadhar"
-    pan = "pan"
-    passport = "passport"
-    voter_id = "voter_id"
-    driving_license = "driving_license"
-    address_proof = "address_proof"
-    bank_statement = "bank_statement"
-    salary_slip = "salary_slip"
-    itr = "itr"
-    form_16 = "form_16"
-    business_registration = "business_registration"
-    license = "license"
-    property_document = "property_document"
-
-
 class GenderEnum(str, Enum):
     male = "Male"
     female = "Female"
@@ -69,3 +53,19 @@ class DocumentType(str, Enum):
     PASSPORT = "PASSPORT"
     VOTER_ID = "VOTER_ID"
     DRIVING_LICENSE = "DRIVING_LICENSE"
+    ADDRESS_PROOF = "ADDRESS_PROOF"
+    BANK_STATEMENT = "BANK_STATEMENT"
+    SALARY_SLIP = "SALARY_SLIP"
+    ITR = "ITR"
+    FORM_16 = "FORM_16"
+    PROPERTY_DOCUMENTS = "PROPERTY_DOCUMENTS"
+
+
+class UploadFileType(str, Enum):
+    salaried = "salaried"
+    self_employed = "self_employed"
+    aadhar_card = "aadhar_card"
+    pan_card = "pan_card"
+    profile_image = "profile_image"
+    property_documents = "property_documents"
+    income_proof = "income_proof"

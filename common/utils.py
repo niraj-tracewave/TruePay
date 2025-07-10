@@ -1,8 +1,10 @@
 from typing import Optional
 
+from fastapi import UploadFile
+from passlib.context import CryptContext
+
 from app_logging import app_logger
 from models.user import User, UserDocument
-from passlib.context import CryptContext
 
 
 def format_user_response(user: User, documents: Optional[list[UserDocument]] = None) -> dict:
@@ -42,6 +44,25 @@ def format_user_response(user: User, documents: Optional[list[UserDocument]] = N
         "aadhaar_document": aadhaar_doc.document_file if aadhaar_doc else "",
     }
 
+
+def format_loan_documents(documents: list) -> list[dict]:
+    formatted_docs = []
+    for doc in documents:
+        formatted_docs.append(
+            {
+                "id": doc.id,
+                "document_type": doc.document_type.value.lower() if hasattr(doc.document_type, "value") else str(
+                    doc.document_type
+                ).lower(),
+                "document_number": doc.document_number or "",
+                "document_file": doc.document_file or "",
+                "status": doc.status.value if hasattr(doc.status, "value") else str(doc.status),
+                "remarks": doc.remarks or "",
+            }
+        )
+    return formatted_docs
+
+
 class PasswordHashing:
     def __init__(self):
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -53,3 +74,14 @@ class PasswordHashing:
     # Verify password
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         return self.pwd_context.verify(plain_password, hashed_password)
+
+
+def validate_file_type(file: UploadFile):
+    allowed_types = [
+        "application/pdf",
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+    ]
+    if file.content_type not in allowed_types:
+        raise Exception(f"Invalid file type: {file.content_type}. Only PDF and images are allowed.")

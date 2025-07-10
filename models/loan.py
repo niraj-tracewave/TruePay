@@ -58,6 +58,19 @@ class LoanApplicant(CreateUpdateTime, CreateByUpdateBy):
         last_letter = random.choice(string.ascii_uppercase)
         return f"TP{letters_part}{digits_part}{last_letter}"
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        # Perform validations during initialization
+        if not self.is_valid_phone(self.phone_number):
+            raise ValueError(f"Invalid phone number: {self.phone_number}")
+
+        if not self.is_valid_email(self.email):
+            raise ValueError(f"Invalid email address: {self.email}")
+
+        if not self.loan_uid:
+            self.loan_uid = self.generate_loan_uid()
+
 
 class LoanDocument(CreateUpdateTime, CreateByUpdateBy):
     __tablename__ = "loan_documents"
