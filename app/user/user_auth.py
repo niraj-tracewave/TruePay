@@ -6,7 +6,7 @@ from models.user import User
 from schemas.auth_schemas import LoginRequest, VerifyOTPRequest, RefreshToken, UpdateProfileRequest
 from services.auth_service import UserAuthService
 
-router = APIRouter(prefix="/user", tags=["User Authentication API's"])
+router = APIRouter(prefix="/user", tags=["User Panel User API's"])
 auth_service = UserAuthService(User)
 
 

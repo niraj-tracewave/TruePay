@@ -9,12 +9,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.admin.admin_auth import router as admin_auth_router
+from app.admin.admin_loan import router as admin_loan_router
+from app.user.user_auth import router as user_auth_router
+from app.user.user_loan import router as user_loan_router
 from common.cache_string import refresh_cache_strings
 from common.response import validation_exception_handler
 from config import app_config
 from custom_middleware.auth_middleware import AuthMiddleware
 from db_domains import db
-from app.user.user_auth import router as user_auth_router
 
 
 @asynccontextmanager
@@ -52,8 +54,9 @@ app.mount("/media", StaticFiles(directory=MEDIA_DIR), name="media")
 
 # User Routers
 app.include_router(user_auth_router)
+app.include_router(user_loan_router)
 app.include_router(admin_auth_router)
-
+app.include_router(admin_loan_router)
 
 if __name__ == "__main__":
     refresh_cache_strings()
