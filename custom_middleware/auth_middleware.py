@@ -15,25 +15,22 @@ from config import app_config
 jwt_service_obj = JWTService()
 SECRET_KEY = app_config.JWT_SECRET_KEY
 
-# Base prefix used in your routers
-BASE_PREFIX = "/api/base"
-
 # Public paths with full prefix
 PUBLIC_PATHS = {
     "user": [
-        f"{BASE_PREFIX}/user/send-otp",
-        f"{BASE_PREFIX}/user/verify-otp",
-        f"{BASE_PREFIX}/user/register",
-        f"{BASE_PREFIX}/user/refresh-token",
+        "/user/send-otp",
+        "/user/verify-otp",
+        "/user/register",
+        "/user/refresh-token",
     ],
     "admin": [
-        f"{BASE_PREFIX}/admin/user/auth"
+        "/admin/user/auth"
     ],
     "global": [
-        f"{BASE_PREFIX}/docs",
-        f"{BASE_PREFIX}/openapi.json",
-        f"{BASE_PREFIX}/open-api",
-        f"{BASE_PREFIX}/media"
+        "/docs",
+        "/openapi.json",
+        "/open-api",
+        "/media"
     ]
 }
 
