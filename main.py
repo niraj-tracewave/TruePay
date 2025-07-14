@@ -30,6 +30,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="True Pay",
+    root_path="/api/base",
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan
@@ -53,10 +54,10 @@ MEDIA_DIR = os.path.abspath("media")
 app.mount("/media", StaticFiles(directory=MEDIA_DIR), name="media")
 
 # User Routers
-app.include_router(user_auth_router, prefix="/api/base")
-app.include_router(user_loan_router, prefix="/api/base")
-app.include_router(admin_auth_router, prefix="/api/base")
-app.include_router(admin_loan_router, prefix="/api/base")
+app.include_router(user_auth_router)
+app.include_router(user_loan_router)
+app.include_router(admin_auth_router)
+app.include_router(admin_loan_router)
 
 if __name__ == "__main__":
     refresh_cache_strings()
