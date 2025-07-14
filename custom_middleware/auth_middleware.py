@@ -15,19 +15,21 @@ jwt_service_obj = JWTService()
 
 PUBLIC_PATHS = {
     "user": [
-        "/user/send-otp",
-        "/user/verify-otp",
-        "/user/register",
-        "/user/refresh-token",
+        "/api/base/user/send-otp",
+        "/api/base/user/verify-otp",
+        "/api/base/user/register",
+        "/api/base/user/refresh-token",
     ],
     "admin": [
-        "/admin/user/auth"
+        "/api/base/admin/user/auth"
     ],
     "global": [
-        "/docs", "/openapi.json", "/open-api", "/media/"
+        "/api/base/docs",
+        "/api/base/openapi.json",
+        "/api/base/open-api",
+        "/api/base/media/"
     ]
 }
-
 
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
