@@ -18,13 +18,13 @@ SECRET_KEY = app_config.JWT_SECRET_KEY
 # Public paths with a full prefix
 PUBLIC_PATHS = {
     "user": [
-        "/user/send-otp",
-        "/user/verify-otp",
-        "/user/register",
-        "/user/refresh-token",
+        "/api/base/user/send-otp",
+        "/api/base/user/verify-otp",
+        "/api/base/user/register",
+        "/api/base/user/refresh-token",
     ],
     "admin": [
-        "/admin/user/auth"
+        "/api/base/admin/user/auth"
     ],
     "global": [
         "/api/base/docs",
