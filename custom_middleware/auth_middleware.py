@@ -15,7 +15,7 @@ from config import app_config
 jwt_service_obj = JWTService()
 SECRET_KEY = app_config.JWT_SECRET_KEY
 
-# Public paths with full prefix
+# Public paths with a full prefix
 PUBLIC_PATHS = {
     "user": [
         "/user/send-otp",
@@ -27,10 +27,10 @@ PUBLIC_PATHS = {
         "/admin/user/auth"
     ],
     "global": [
-        "/docs",
-        "/openapi.json",
-        "/open-api",
-        "/media"
+        "/api/base/docs",
+        "/api/base/openapi.json",
+        "/api/base/open-api",
+        "/api/base/media"
     ]
 }
 
