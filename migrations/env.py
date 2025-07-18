@@ -9,6 +9,7 @@ from config import app_config
 from db_domains import Base
 from models.user import *
 from models.loan import *
+from models.surpass import *
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

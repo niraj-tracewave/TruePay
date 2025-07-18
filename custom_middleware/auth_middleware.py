@@ -22,6 +22,7 @@ PUBLIC_PATHS = {
         "/api/base/user/verify-otp",
         "/api/base/user/register",
         "/api/base/user/refresh-token",
+        "/api/base/surpass/get-cibil-score",
     ],
     "admin": [
         "/api/base/admin/user/auth"
