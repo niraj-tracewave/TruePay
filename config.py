@@ -24,6 +24,8 @@ class Setting(BaseSettings):
     AWS_REGION: str
     AWS_BUCKET_NAME: str
     S3_BUCKET_URL: str
+    SURPASS_API_BASE_URL: str
+    SURPASS_TOKEN: str
 
     # Default Log type
     LOG_LEVEL: str
@@ -78,6 +80,8 @@ class Config(object):
     AWS_REGION = app_settings.AWS_REGION
     AWS_BUCKET_NAME = app_settings.AWS_BUCKET_NAME
     S3_BUCKET_URL = app_settings.S3_BUCKET_URL
+    SURPASS_API_BASE_URL = app_settings.SURPASS_API_BASE_URL
+    SURPASS_TOKEN = app_settings.SURPASS_TOKEN
 
 
 class LocalConfig(Config):

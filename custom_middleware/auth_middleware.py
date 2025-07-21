@@ -1,4 +1,5 @@
 import json
+import re
 
 import jwt
 from fastapi import Request
@@ -16,21 +17,25 @@ jwt_service_obj = JWTService()
 SECRET_KEY = app_config.JWT_SECRET_KEY
 
 # Public paths with a full prefix
+API_PREFIX = "/api/base"
+
 PUBLIC_PATHS = {
     "user": [
-        "/api/base/user/send-otp",
-        "/api/base/user/verify-otp",
-        "/api/base/user/register",
-        "/api/base/user/refresh-token",
+        "/user/send-otp",
+        "/user/verify-otp",
+        "/user/register",
+        "/user/refresh-token",
+        "/surpass/get-cibil-score",
+        "/surpass/get-cibil-report/{cibil_score_id}",
     ],
     "admin": [
-        "/api/base/admin/user/auth"
+        "/admin/user/auth"
     ],
     "global": [
-        "/api/base/docs",
-        "/api/base/openapi.json",
-        "/api/base/open-api",
-        "/api/base/media"
+        "/docs",
+        "/openapi.json",
+        "/open-api",
+        "/media"
     ]
 }
 
@@ -43,13 +48,26 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         # Combine and normalize all public paths
         all_public_paths = PUBLIC_PATHS["user"] + PUBLIC_PATHS["admin"] + PUBLIC_PATHS["global"]
-        normalized_paths = [path.rstrip("/") for path in all_public_paths]
-        app_logger.info(f"[AuthMiddleware] All public paths: {normalized_paths}")
+        regex_patterns = []
 
-        # Allow if a request matches any public path
-        if request_path in normalized_paths:
-            app_logger.info("[AuthMiddleware] Matched public path → skipping auth")
-            return await call_next(request)
+        for path in all_public_paths:
+            path = path.rstrip("/")
+
+            # Generate both the base-prefixed and short variants
+            full_path = f"{API_PREFIX}{path}"
+            short_path = path
+
+            for variant in [full_path, short_path]:
+                # Convert FastAPI-style path params ({param}) to regex
+                pattern = re.sub(r"{[^/]+}", r"[^/]+", variant)
+                pattern = f"^{pattern}$"
+                regex_patterns.append(pattern)
+
+        # Match against regex patterns
+        for pattern in regex_patterns:
+            if re.fullmatch(pattern, request_path):
+                app_logger.info(f"[AuthMiddleware] Matched public path via regex → skipping auth: {pattern}")
+                return await call_next(request)
 
         # Require Authorization header
         auth_header = request.headers.get("Authorization")
