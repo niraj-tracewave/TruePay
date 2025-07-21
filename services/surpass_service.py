@@ -5,6 +5,7 @@ from typing import Any, Dict
 import httpx
 from starlette import status
 
+from app_logging import app_logger
 from config import app_config
 from db_domains.db_interface import DBInterface
 from models.surpass import UserCibilReport
@@ -116,80 +117,142 @@ class SurpassService:
             }
         }
 
-    # async def fetch_cibil_report(self, user_id: int, cibil_score_id: int):
-    #     try:
-    #         user_cibil_report = DBInterface(UserCibilReport)
-    #         cibil_report = user_cibil_report.read_single_by_fields(
-    #             fields=[
-    #                 UserCibilReport.id == cibil_score_id
-    #             ]
-    #         )
-    #
-    #         accounts = cibil_report.credit_report[0]["accounts"]
-    #
-    #         # 1. Credit Utilization
-    #         utilizations = []
-    #         for acc in accounts:
-    #             try:
-    #                 high = int(acc.get("highCreditAmount", 0))
-    #                 balance = int(acc.get("currentBalance", 0))
-    #                 print("=======", high, balance)
-    #                 if high > 0:
-    #                     utilization = (balance / high) * 100
-    #                     utilizations.append(utilization)
-    #             except (ValueError, TypeError):
-    #                 continue
-    #
-    #         avg_utilization = round(sum(utilizations) / len(utilizations), 2) if utilizations else 0
-    #
-    #         # # 2. Payment History
-    #         # all_history = "".join(acc.get("paymentHistory", "") for acc in accounts)
-    #         # history_blocks = re.findall(r"...", all_history)
-    #         # on_time = sum(1 for block in history_blocks if block == "000")
-    #         # payment_history_percent = round((on_time / len(history_blocks)) * 100, 2) if history_blocks else 0
-    #         #
-    #         # # 3. Credit History
-    #         # opened_dates = []
-    #         # for acc in accounts:
-    #         #     date_str = acc.get("dateOpened")
-    #         #     try:
-    #         #         opened_date = datetime.strptime(date_str, "%d%m%Y")
-    #         #         opened_dates.append(opened_date)
-    #         #     except (ValueError, TypeError):
-    #         #         continue
-    #         #
-    #         # oldest_date = min(opened_dates) if opened_dates else None
-    #         # today = datetime.today()
-    #         # years, months = 0, 0
-    #         # if oldest_date:
-    #         #     years = today.year - oldest_date.year
-    #         #     months = today.month - oldest_date.month
-    #         #     if months < 0:
-    #         #         years -= 1
-    #         #         months += 12
-    #         #
-    #         # # 4. Loan Accounts
-    #         # loan_accounts = len(accounts)
-    #         #
-    #         # # Final Output
-    #         # report_summary = {
-    #         #     "Payment History (%)": f"{payment_history_percent}%",
-    #         #     "Credit Utilization (%)": f"{avg_utilization}%",
-    #         #     "Credit History": f"{years} Year {months} Months",
-    #         #     "Loan Accounts": loan_accounts
-    #         # }
-    #
-    #         return {
-    #             "success": True,
-    #             "message": "CIBIL report retrieved successfully",
-    #             "status_code": status.HTTP_200_OK,
-    #             "data": {"report_details": {}}
-    #         }
-    #     except Exception as e:
-    #         print(e)
-    #         return {
-    #             "success": False,
-    #             "message": "Error fetching CIBIL report",
-    #             "status_code": status.HTTP_400_BAD_REQUEST,
-    #             "data": {}
-    #         }
+    async def fetch_cibil_report(self, user_id: int, cibil_score_id: int):
+        try:
+            def get_payment_rating(value):
+                return "Excellent" if value == 100 else "Good" if value >= 95 else "Fair"
+
+            def get_utilization_rating(value):
+                if value <= 10:
+                    return "Excellent"
+                elif value <= 30:
+                    return "Good"
+                elif value <= 50:
+                    return "Fair"
+                else:
+                    return "Poor"
+
+            def get_credit_history_rating(years, months):
+                total_months = years * 12 + months
+                if total_months >= 60:
+                    return "Excellent"
+                elif total_months >= 24:
+                    return "Good"
+                else:
+                    return "Average"
+
+            def get_loan_accounts_rating(count):
+                if count <= 2:
+                    return "Excellent"
+                elif count <= 5:
+                    return "Good"
+                elif count <= 7:
+                    return "Fair"
+                else:
+                    return "Poor"
+
+            app_logger.info(f"Fetching CIBIL report for user_id: {user_id}, cibil_score_id: {cibil_score_id}")
+            user_cibil_report = DBInterface(UserCibilReport)
+            cibil_report = user_cibil_report.read_single_by_fields(
+                [
+                    UserCibilReport.id == cibil_score_id
+                ]
+            )
+
+            accounts = cibil_report.credit_report[0].get("accounts", [])
+
+            # 1. Credit Utilization
+            total_used, total_limit = 0, 0
+            for acc in accounts:
+                account_type = acc.get("accountType", "").lower()
+                account_status = acc.get("accountStatus", "").lower()
+
+                if "credit card" in account_type and "closed" not in account_status:
+                    try:
+                        high = int(acc.get("highCreditAmount", 0))
+                        balance = int(acc.get("currentBalance", 0))
+                        if high > 0 and balance >= 0:
+                            total_used += balance
+                            total_limit += high
+                    except (ValueError, TypeError) as e:
+                        app_logger.warning(f"Skipping credit card due to error: {e}")
+                        continue
+
+            avg_utilization = round((total_used / total_limit) * 100, 2) if total_limit > 0 else 0
+            app_logger.info(f"Total Used: {total_used} | Total Limit: {total_limit} | Utilization: {avg_utilization}%")
+
+            # 2. Payment History
+            on_time, total_blocks = 0, 0
+            for acc in accounts:
+                payment_history = acc.get("paymentHistory", "")
+                if isinstance(payment_history, str):
+                    history_blocks = re.findall(r"...", payment_history)
+                    valid_blocks = [b for b in history_blocks if re.fullmatch(r"\d{3}", b)]
+                    total_blocks += len(valid_blocks)
+                    on_time += sum(1 for b in valid_blocks if b == "000")
+
+            payment_history_percent = round((on_time / total_blocks) * 100, 2) if total_blocks > 0 else 0
+            app_logger.info(f"On Time Payments: {on_time} / {total_blocks} = {payment_history_percent}%")
+
+            # 3. Credit History
+            opened_dates = []
+            for acc in accounts:
+                date_str = acc.get("dateOpened")
+                try:
+                    opened_date = datetime.strptime(date_str, "%Y-%m-%d")
+                    opened_dates.append(opened_date)
+                except (ValueError, TypeError) as e:
+                    app_logger.warning(f"Skipping account due to invalid date: {date_str} | Error: {e}")
+                    continue
+
+            years, months = 0, 0
+            if opened_dates:
+                oldest_date = min(opened_dates)
+                today = datetime.today()
+                years = today.year - oldest_date.year
+                months = today.month - oldest_date.month
+                if months < 0:
+                    years -= 1
+                    months += 12
+
+            app_logger.info(f"Credit History: {years} years, {months} months")
+
+            # 4. Loan Accounts
+            loan_accounts = len(accounts)
+            app_logger.info(f"Total Loan Accounts: {loan_accounts}")
+
+            report_summary = {
+                "payment_history": {
+                    "value": f"{payment_history_percent}%",
+                    "message": get_payment_rating(payment_history_percent)
+                },
+                "credit_utilization": {
+                    "value": f"{avg_utilization}%",
+                    "message": get_utilization_rating(avg_utilization)
+                },
+                "credit_history": {
+                    "value": f"{years} Year {months} Months",
+                    "message": f"{years} Year {months} Months Credit History is {get_credit_history_rating(years, months)}"
+                },
+                "loan_accounts": {
+                    "value": loan_accounts,
+                    "message": f"{loan_accounts} Accounts Level is {get_loan_accounts_rating(loan_accounts)}"
+                }
+            }
+
+            return {
+                "success": True,
+                "message": "CIBIL report retrieved successfully",
+                "status_code": status.HTTP_200_OK,
+                "data": {"report_details": report_summary}
+            }
+
+        except Exception as e:
+            app_logger.error(f"Error fetching CIBIL report: {str(e)}")
+            return {
+                "success": False,
+                "message": "Error fetching CIBIL report",
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": {}
+            }
+

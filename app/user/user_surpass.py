@@ -21,13 +21,13 @@ async def get_cibil_score_api(request: Request, payload_data: GetCibilReportData
     )
 
 
-# @router.post("/get-cibil-report/{cibil_score_id}", summary="Get CIBIL Report")
-# async def get_cibil_report_api(request: Request, cibil_score_id: int):
-#     user_state = getattr(request.state, "user", None)
-#     response = await surpass_service.fetch_cibil_report(user_id=1, cibil_score_id=cibil_score_id)
-#     return ApiResponse.create_response(
-#         success=response.get("success"),
-#         message=response.get("message"),
-#         status_code=response.get("status_code"),
-#         data=response.get("data")
-#     )
+@router.post("/get-cibil-report/{cibil_score_id}", summary="Get CIBIL Report")
+async def get_cibil_report_api(request: Request, cibil_score_id: int):
+    user_state = getattr(request.state, "user", None)
+    response = await surpass_service.fetch_cibil_report(user_id=1, cibil_score_id=cibil_score_id)
+    return ApiResponse.create_response(
+        success=response.get("success"),
+        message=response.get("message"),
+        status_code=response.get("status_code"),
+        data=response.get("data")
+    )
