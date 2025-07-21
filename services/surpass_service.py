@@ -1,4 +1,5 @@
-from datetime import date, timedelta
+import re
+from datetime import date, timedelta, datetime
 from typing import Any, Dict
 
 import httpx
@@ -114,3 +115,81 @@ class SurpassService:
                 "credit_score": credit_score
             }
         }
+
+    # async def fetch_cibil_report(self, user_id: int, cibil_score_id: int):
+    #     try:
+    #         user_cibil_report = DBInterface(UserCibilReport)
+    #         cibil_report = user_cibil_report.read_single_by_fields(
+    #             fields=[
+    #                 UserCibilReport.id == cibil_score_id
+    #             ]
+    #         )
+    #
+    #         accounts = cibil_report.credit_report[0]["accounts"]
+    #
+    #         # 1. Credit Utilization
+    #         utilizations = []
+    #         for acc in accounts:
+    #             try:
+    #                 high = int(acc.get("highCreditAmount", 0))
+    #                 balance = int(acc.get("currentBalance", 0))
+    #                 print("=======", high, balance)
+    #                 if high > 0:
+    #                     utilization = (balance / high) * 100
+    #                     utilizations.append(utilization)
+    #             except (ValueError, TypeError):
+    #                 continue
+    #
+    #         avg_utilization = round(sum(utilizations) / len(utilizations), 2) if utilizations else 0
+    #
+    #         # # 2. Payment History
+    #         # all_history = "".join(acc.get("paymentHistory", "") for acc in accounts)
+    #         # history_blocks = re.findall(r"...", all_history)
+    #         # on_time = sum(1 for block in history_blocks if block == "000")
+    #         # payment_history_percent = round((on_time / len(history_blocks)) * 100, 2) if history_blocks else 0
+    #         #
+    #         # # 3. Credit History
+    #         # opened_dates = []
+    #         # for acc in accounts:
+    #         #     date_str = acc.get("dateOpened")
+    #         #     try:
+    #         #         opened_date = datetime.strptime(date_str, "%d%m%Y")
+    #         #         opened_dates.append(opened_date)
+    #         #     except (ValueError, TypeError):
+    #         #         continue
+    #         #
+    #         # oldest_date = min(opened_dates) if opened_dates else None
+    #         # today = datetime.today()
+    #         # years, months = 0, 0
+    #         # if oldest_date:
+    #         #     years = today.year - oldest_date.year
+    #         #     months = today.month - oldest_date.month
+    #         #     if months < 0:
+    #         #         years -= 1
+    #         #         months += 12
+    #         #
+    #         # # 4. Loan Accounts
+    #         # loan_accounts = len(accounts)
+    #         #
+    #         # # Final Output
+    #         # report_summary = {
+    #         #     "Payment History (%)": f"{payment_history_percent}%",
+    #         #     "Credit Utilization (%)": f"{avg_utilization}%",
+    #         #     "Credit History": f"{years} Year {months} Months",
+    #         #     "Loan Accounts": loan_accounts
+    #         # }
+    #
+    #         return {
+    #             "success": True,
+    #             "message": "CIBIL report retrieved successfully",
+    #             "status_code": status.HTTP_200_OK,
+    #             "data": {"report_details": {}}
+    #         }
+    #     except Exception as e:
+    #         print(e)
+    #         return {
+    #             "success": False,
+    #             "message": "Error fetching CIBIL report",
+    #             "status_code": status.HTTP_400_BAD_REQUEST,
+    #             "data": {}
+    #         }
