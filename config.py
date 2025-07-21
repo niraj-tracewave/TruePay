@@ -26,6 +26,7 @@ class Setting(BaseSettings):
     S3_BUCKET_URL: str
     SURPASS_API_BASE_URL: str
     SURPASS_TOKEN: str
+    WHITELIST_MOBILE_NUMBER: str
 
     # Default Log type
     LOG_LEVEL: str
@@ -82,6 +83,7 @@ class Config(object):
     S3_BUCKET_URL = app_settings.S3_BUCKET_URL
     SURPASS_API_BASE_URL = app_settings.SURPASS_API_BASE_URL
     SURPASS_TOKEN = app_settings.SURPASS_TOKEN
+    WHITELIST_MOBILE_NUMBER = app_settings.WHITELIST_MOBILE_NUMBER
 
 
 class LocalConfig(Config):

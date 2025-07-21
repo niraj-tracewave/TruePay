@@ -33,9 +33,15 @@ class UserAuthService:
         app_logger.info(f"Initiating OTP send process for: {phone_number}")
 
         try:
+            whitelisted_mobile_numbers = os.getenv("WHITELIST_MOBILE_NUMBER", "")
+            whitelisted_numbers = [num.strip() for num in whitelisted_mobile_numbers.split(",") if num.strip()]
+
             if os.getenv("ENV_FASTAPI_SERVER_TYPE") == "local":
                 otp, secret = "123456", "1234567"
                 app_logger.debug("Local environment detected. Using static OTP.")
+            elif phone_number in whitelisted_numbers:
+                otp, secret = "123456", "1234567"
+                app_logger.debug("Whitelisted number detected. Using static OTP.")
             else:
                 otp, secret = OTPService.generate_otp(phone_number)
                 message = get_otp_message(otp)
@@ -87,7 +93,14 @@ class UserAuthService:
                 is_new_user = True
 
             # OTP Verification
-            if os.getenv("ENV_FASTAPI_SERVER_TYPE") == "local":
+            whitelisted_mobile_numbers = os.getenv("WHITELIST_MOBILE_NUMBER", "")
+            whitelisted_numbers = [num.strip() for num in whitelisted_mobile_numbers.split(",") if num.strip()]
+            is_skip_otp = os.getenv("ENV_FASTAPI_SERVER_TYPE") == "local" or phone_number in whitelisted_numbers
+
+            if is_skip_otp:
+                app_logger.info(
+                    f"OTP verification skipped due to {'local env' if os.getenv('ENV_FASTAPI_SERVER_TYPE') == 'local' else 'whitelisted number'}"
+                )
                 if verify_otp_request.otp == "123456":
                     success, message = True, gettext("verified_successfully").format("OTP")
                 else:
