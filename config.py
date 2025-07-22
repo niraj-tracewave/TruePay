@@ -122,7 +122,7 @@ config_utils = ConfigUtils()
 
 
 class LogConfiguration:
-    logger_name: str = "Loan APP"
+    logger_name: str = "True Pay"
     logger_formatter: str = "%(asctime)s - %(levelname)s - %(name)s - %(process)d - %(filename)s|%(lineno)s:: %(funcName)s|%(lineno)s:: %(message)s"
     roll_over: str = "MIDNIGHT"
     backup_count: int = 90

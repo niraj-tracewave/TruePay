@@ -2,53 +2,21 @@ import re
 from datetime import date, timedelta, datetime
 from typing import Any, Dict
 
-import httpx
 from starlette import status
 
 from app_logging import app_logger
-from config import app_config
+from common.cache_string import gettext
+from common.common_services.surpass_service import SurpassRequestService
 from db_domains.db_interface import DBInterface
 from models.surpass import UserCibilReport
-from schemas.surpass_schemas import GetCibilReportData
+from schemas.surpass_schemas import GetCibilReportData, PanCardDetails
 
 
 class SurpassService:
-    def __init__(self):
-        self.base_url = app_config.SURPASS_API_BASE_URL
-        self.bearer_token = app_config.SURPASS_TOKEN
-        self.api_prefix = "api/v1"
-        self.headers = {
-            "Authorization": f"Bearer {self.bearer_token}",
-            "Content-Type": "application/json"
-        }
+    def __init__(self) -> None:
+        self.surpass_request_obj = SurpassRequestService()
 
-    async def make_request(self, endpoint: str, method: str = "POST", data=None, params=None):
-        url = f"{self.base_url}/{self.api_prefix}/{endpoint}"
-        response = None
-
-        try:
-            async with httpx.AsyncClient() as client:
-                if method.upper() == "GET":
-                    response = await client.get(url, params=params, headers=self.headers)
-                elif method.upper() == "POST":
-                    response = await client.post(url, json=data, headers=self.headers)
-                else:
-                    return None, status.HTTP_400_BAD_REQUEST, "Unsupported HTTP method"
-                response_data = response.json()
-
-                if response.status_code >= 400:
-                    error_message = response_data.get("message", "API returned an error")
-                    return response_data, response.status_code, error_message
-                return response.json(), response.status_code, None
-
-        except httpx.RequestError as e:
-            return None, status.HTTP_500_INTERNAL_SERVER_ERROR, f"Request error: {str(e)}"
-        except httpx.HTTPStatusError as e:
-            return None, e.response.status_code, f"HTTP error: {str(e)}"
-        except Exception as e:
-            return None, status.HTTP_500_INTERNAL_SERVER_ERROR, f"Unexpected error: {str(e)}"
-
-    async def fetch_cibil_score(self, user_id: str, payload_data: GetCibilReportData) -> Dict[str, Any]:
+    async def fetch_cibil_score(self, user_id: int, payload_data: GetCibilReportData) -> Dict[str, Any]:
         data_dict = payload_data.model_dump(mode="json", by_alias=True)
         user_cibil_report = DBInterface(UserCibilReport)
         current_date = date.today()
@@ -61,12 +29,12 @@ class SurpassService:
         )
 
         async def get_and_save_cibil_report(existing_id: str = None):
-            """Fetch from Surpass and create or update report."""
-            response_data, status_code, error = await self.make_request(
+            """Fetch from Surpass and create or update a report."""
+            response_data, request_status_code, request_error = await self.surpass_request_obj.make_request(
                 endpoint="credit-report-cibil/fetch-report", method="POST", data=data_dict
             )
-            if error:
-                return None, status_code, error
+            if request_error:
+                return None, request_status_code, request_error
 
             data = response_data.get("data", {})
             report_data = {
@@ -82,21 +50,30 @@ class SurpassService:
             }
 
             if existing_id:
-                user_cibil_report.update(object_id=existing_id, data=report_data)
+                user_cibil_report.update(_id=existing_id, data=report_data)
             else:
-                user_cibil_report.create(data=report_data)
+                create_response = user_cibil_report.create(data=report_data)
+                existing_id = create_response.id
 
-            return data.get("credit_score"), status_code, None
+            return {
+                "id": existing_id,
+                "credit_score": data.get("credit_score"),
+                "client_id": data.get("client_id"),
+            }, status_code, None
 
         # Logic conditions
         if not existing_report:
-            print("Not Exitign")
-            credit_score, status_code, error = await get_and_save_cibil_report()
+            print("Not Exiting")
+            credit_score_data, status_code, error = await get_and_save_cibil_report()
         elif existing_report.next_eligible_date and current_date > existing_report.next_eligible_date:
             print("Not perfect date")
-            credit_score, status_code, error = await get_and_save_cibil_report(existing_report.id)
+            credit_score_data, status_code, error = await get_and_save_cibil_report(existing_report.id)
         else:
-            credit_score = existing_report.credit_score
+            credit_score_data = {
+                "id": existing_report.id,
+                "credit_score": existing_report.credit_score,
+                "client_id": existing_report.client_id,
+            }
             status_code = status.HTTP_200_OK
             error = None
 
@@ -112,9 +89,7 @@ class SurpassService:
             "success": True,
             "message": "CIBIL score retrieved successfully",
             "status_code": status_code,
-            "data": {
-                "credit_score": credit_score
-            }
+            "data": credit_score_data
         }
 
     async def fetch_cibil_report(self, user_id: int, cibil_score_id: int):
@@ -158,6 +133,13 @@ class SurpassService:
                     UserCibilReport.id == cibil_score_id
                 ]
             )
+            if not cibil_report:
+                return {
+                    "success": False,
+                    "message": gettext("not_found").format("CIBIL report ID"),
+                    "status_code": status.HTTP_404_NOT_FOUND,
+                    "data": {}
+                }
 
             accounts = cibil_report.credit_report[0].get("accounts", [])
 
@@ -248,6 +230,7 @@ class SurpassService:
             }
 
         except Exception as e:
+            print(e)
             app_logger.error(f"Error fetching CIBIL report: {str(e)}")
             return {
                 "success": False,
@@ -256,3 +239,52 @@ class SurpassService:
                 "data": {}
             }
 
+    async def validate_pan_card(self, user_id: int, pan_detail: PanCardDetails):
+        try:
+            pan_card_number = pan_detail.pan_card
+            app_logger.info(f"User {user_id} submitted PAN: {pan_card_number}")
+
+            pan_regex_check = re.compile(r'^[A-Z]{5}[0-9]{4}[A-Z]$')
+
+            if not pan_regex_check.fullmatch(pan_card_number):
+                app_logger.info(f"User {user_id} submitted invalid PAN format: {pan_card_number}")
+
+                return {
+                    "success": False,
+                    "message": "Invalid PAN card format",
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "data": {}
+                }
+
+            app_logger.info(f"User {user_id} submitted valid PAN format. Initiating Surpass API validation.")
+            response_data, request_status_code, request_error = await self.surpass_request_obj.make_request(
+                endpoint="pan/pan", method="POST", data={"id_number": pan_card_number}
+            )
+
+            if request_error:
+                app_logger.error(
+                    f"Surpass API error for PAN {pan_card_number} by user {user_id}: {request_error}"
+                )
+                return {
+                    "success": False,
+                    "message": request_error,
+                    "status_code": request_status_code,
+                    "data": {}
+                }
+
+            app_logger.info(f"PAN {pan_card_number} validated successfully for user {user_id} via Surpass API.")
+            return {
+                "success": True,
+                "message": "PAN card validated successfully",
+                "status_code": status.HTTP_200_OK,
+                "data": response_data.get("data", {})
+            }
+
+        except Exception as e:
+            app_logger.error(f"Error validating PAN card for user {user_id}: {str(e)}")
+            return {
+                "success": False,
+                "message": "Error validating PAN card",
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": {}
+            }

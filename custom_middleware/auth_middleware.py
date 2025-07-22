@@ -24,9 +24,7 @@ PUBLIC_PATHS = {
         "/user/send-otp",
         "/user/verify-otp",
         "/user/register",
-        "/user/refresh-token",
-        "/surpass/get-cibil-score",
-        "/surpass/get-cibil-report/{cibil_score_id}",
+        "/user/refresh-token"
     ],
     "admin": [
         "/admin/user/auth"

@@ -5,7 +5,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from common.enums import UserRole, DocumentType
+from common.enums import UserRole, DocumentType, DocumentStatus
 from db_domains import CreateUpdateTime
 
 
@@ -50,6 +50,10 @@ class UserDocument(CreateUpdateTime):
     document_type = Column(Enum(DocumentType), nullable=False, index=True)
     document_number = Column(String(50), nullable=False, index=True)
     document_file = Column(String(255), nullable=False)
+    # status = Column(
+    #     Enum(DocumentStatus), default=DocumentStatus.PENDING, server_default=DocumentStatus.PENDING.value,
+    #     nullable=False
+    # )
 
     user = relationship("User", back_populates="documents")
 
