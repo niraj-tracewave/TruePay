@@ -18,3 +18,7 @@ class GetCibilReportData(BaseModel):
     @classmethod
     def normalize_consent(cls, v: str):
         return v.upper()
+
+
+class PanCardDetails(BaseModel):
+    pan_card: str
