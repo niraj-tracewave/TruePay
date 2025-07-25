@@ -1,6 +1,8 @@
+from datetime import datetime
 from typing import Optional, List
 
-from pydantic import constr, model_validator, EmailStr, BaseModel
+from pydantic import BaseModel
+from pydantic import constr, model_validator, EmailStr
 
 from common.enums import LoanType, IncomeProofType, DocumentType, LoanStatus
 
@@ -49,11 +51,6 @@ class LoanForm(BaseModel):
         return values
 
 
-from pydantic import BaseModel
-from typing import Optional, List
-from datetime import datetime
-
-
 class LoanDocumentSchema(BaseModel):
     id: int
     document_type: str
@@ -71,14 +68,28 @@ class LoanApplicantResponseSchema(BaseModel):
     id: int
     loan_uid: str
     name: str
+    email: Optional[str]
     phone_number: str
     annual_income: int
     desired_loan: int
+    date_of_birth: datetime
+    gender: Optional[str]
+    address: Optional[str]
+    company_name: Optional[str]
+    company_address: Optional[str]
+    designation: Optional[str]
     purpose_of_loan: Optional[str]
+    remarks: Optional[str]
     status: str
     created_at: datetime
+    modified_at: datetime
+    is_deleted: bool
+    deleted_at: Optional[datetime]
+    created_by: int
+    modified_by: int
     loan_type: str
     approved_loan: Optional[float]
+    documents: Optional[List[LoanDocumentSchema]] = []
 
     model_config = {
         "from_attributes": True
