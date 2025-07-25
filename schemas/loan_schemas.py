@@ -89,7 +89,6 @@ class LoanApplicantResponseSchema(BaseModel):
     modified_by: int
     loan_type: str
     approved_loan: Optional[float]
-    documents: Optional[List[LoanDocumentSchema]] = []
 
     model_config = {
         "from_attributes": True
