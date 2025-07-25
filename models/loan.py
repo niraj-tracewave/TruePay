@@ -101,7 +101,7 @@ class LoanApprovalDetail(CreateUpdateTime, CreateByUpdateBy):
 
     applicant_id = Column(Integer, ForeignKey("loan_applicants.id"), unique=True, nullable=False, index=True)
 
-    interest_rate_id = Column(Integer, ForeignKey("interest_rates.id"), nullable=False)
+    interest_rate_id = Column(Integer, ForeignKey("credit_score_range_rate.id"), nullable=False)
     processing_fee_id = Column(Integer, ForeignKey("processing_fees.id"), nullable=False)
     processing_fee_amount = Column(Float, nullable=False)  # E.g., ₹10,000.0
 
@@ -112,7 +112,7 @@ class LoanApprovalDetail(CreateUpdateTime, CreateByUpdateBy):
 
     # Relationships
     applicant = relationship("LoanApplicant", backref="approval_detail", uselist=False)
-    interest_rate = relationship("InterestRate")
+    interest_rate = relationship("CreditScoreRangeRate")
     processing_fee = relationship("ProcessingFee")
 
     __table_args__ = (

@@ -27,8 +27,7 @@ PUBLIC_PATHS = {
         "/user/refresh-token"
     ],
     "admin": [
-        "/admin/user/auth",
-        "/admin/credit/add-credit-interest",
+        "/admin/user/auth"
     ],
     "global": [
         "/docs",
