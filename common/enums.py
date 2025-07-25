@@ -23,6 +23,7 @@ class LoanStatus(str, Enum):
     DISBURSED = "DISBURSED"
     CLOSED = "CLOSED"
     CANCELLED = "CANCELLED"
+    USER_ACCEPTED = "USER_ACCEPTED"
 
 
 class DocumentStatus(str, Enum):
@@ -69,6 +70,7 @@ class UploadFileType(str, Enum):
     profile_image = "profile_image"
     property_documents = "property_documents"
     income_proof = "income_proof"
+
 
 class GenderEnum(str, Enum):
     male = "male"

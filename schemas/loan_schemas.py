@@ -71,42 +71,14 @@ class LoanApplicantResponseSchema(BaseModel):
     id: int
     loan_uid: str
     name: str
-    email: Optional[str]
-    phone_number: str
-    annual_income: int
-    desired_loan: int
-    date_of_birth: datetime
-    gender: Optional[str]
-    address: Optional[str]
-    company_name: Optional[str]
-    company_address: Optional[str]
-    designation: Optional[str]
-    purpose_of_loan: Optional[str]
-    remarks: Optional[str]
-    status: str
-    created_at: datetime
-    modified_at: datetime
-    is_deleted: bool
-    deleted_at: Optional[datetime]
-    created_by: int
-    modified_by: int
-    documents: Optional[List[LoanDocumentSchema]] = []
-
-    model_config = {
-        "from_attributes": True
-    }
-
-
-class LoanApplicantResponseSchema(BaseModel):
-    id: int
-    loan_uid: str
-    name: str
     phone_number: str
     annual_income: int
     desired_loan: int
     purpose_of_loan: Optional[str]
     status: str
     created_at: datetime
+    loan_type: str
+    approved_loan: Optional[float]
 
     model_config = {
         "from_attributes": True
@@ -138,6 +110,8 @@ class UpdateLoanForm(LoanForm):
     proof_type: Optional[IncomeProofType] = None
     document_type: Optional[DocumentType] = None
     document_file: Optional[List] = None
+    credit_score_range_rate_id: Optional[int] = None
+    custom_rate_percentage: Optional[float] = None
 
     property_document_file: Optional[List[str]] = None
 
@@ -146,12 +120,19 @@ class UpdateLoanForm(LoanForm):
         status = values.status
         approved_loan = values.approved_loan
         remarks = values.remarks
+        credit_score_range_rate_id = values.credit_score_range_rate_id
+        custom_rate_percentage = values.custom_rate_percentage
 
         if status and not remarks:
             raise ValueError('Remarks is required when updating loan status')
 
-        if status in [LoanStatus.APPROVED, LoanStatus.REJECTED, LoanStatus.ON_HOLD] and approved_loan is None:
-            raise ValueError("approved_loan is required when status is APPROVED, REJECTED, or ON_HOLD.")
+        if status == LoanStatus.APPROVED:
+            if approved_loan is None:
+                raise ValueError("approved_loan is required when status is APPROVED")
+            if credit_score_range_rate_id is None and custom_rate_percentage is None:
+                raise ValueError(
+                    "Either credit_score_range_rate_id or custom_rate_percentage is required when status is APPROVED"
+                )
 
         if values.loan_type == LoanType.LAP and not values.property_document_file:
             raise ValueError('Property Document File is required for LAP loan type')
