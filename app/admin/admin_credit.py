@@ -4,7 +4,7 @@ from starlette import status
 from common.response import ApiResponse
 from models.credit import CreditScoreRangeRate
 from schemas.credit_schemas import CombinedLoanConfigCreate, CombinedLoanConfigUpdate
-from services.credit import CreditScoreService
+from services.credit_service import CreditScoreService
 
 router = APIRouter(prefix="/admin/credit", tags=["Admin Panel Credit API's"])
 credit_service = CreditScoreService(CreditScoreRangeRate)

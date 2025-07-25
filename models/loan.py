@@ -34,7 +34,12 @@ class LoanApplicant(CreateUpdateTime, CreateByUpdateBy):
         Enum(LoanStatus), default=LoanStatus.PENDING, server_default=LoanStatus.PENDING.value, nullable=False
     )
     approved_loan = Column(Float, nullable=True)
+    credit_score_range_rate_id = Column(
+        Integer, ForeignKey("credit_score_range_rate.id", ondelete="SET NULL"), nullable=True
+    )
+    custom_rate_percentage = Column(Float, nullable=True)
 
+    credit_score_range_rate = relationship("CreditScoreRangeRate")
     documents = relationship("LoanDocument", back_populates="applicant", cascade="all, delete-orphan")
 
     def __repr__(self):
@@ -101,12 +106,15 @@ class LoanApprovalDetail(CreateUpdateTime, CreateByUpdateBy):
 
     applicant_id = Column(Integer, ForeignKey("loan_applicants.id"), unique=True, nullable=False, index=True)
 
-    interest_rate_id = Column(Integer, ForeignKey("credit_score_range_rate.id"), nullable=False)
+    interest_rate_id = Column(Integer, ForeignKey("credit_score_range_rate.id"), nullable=True)
+    final_interest_rate = Column(Float, nullable=False)
+    custom_interest_rate = Column(Float, nullable=True)
     processing_fee_id = Column(Integer, ForeignKey("processing_fees.id"), nullable=False)
     processing_fee_amount = Column(Float, nullable=False)  # E.g., ₹10,000.0
 
     approved_loan_amount = Column(Float, nullable=False)
-    disbursed_amount = Column(Float, nullable=False)
+    user_accepted_amount = Column(Float, nullable=True)
+    disbursed_amount = Column(Float, nullable=True)
 
     remarks = Column(String(500), nullable=True)
 

@@ -6,7 +6,7 @@ from starlette import status
 from common.response import ApiResponse
 from models.loan import LoanApplicant
 from schemas.loan_schemas import LoanForm, UpdateLoanForm
-from services.loan_service import AdminLoanService
+from services.loan_service.admin_loan import AdminLoanService
 
 router = APIRouter(prefix="/admin/loan", tags=["Admin Panel Loan API's"])
 admin_loan_service = AdminLoanService(LoanApplicant)

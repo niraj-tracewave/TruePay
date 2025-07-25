@@ -7,7 +7,7 @@ from common.enums import UploadFileType
 from common.response import ApiResponse
 from models.loan import LoanApplicant
 from schemas.loan_schemas import LoanForm
-from services.loan_service import UserLoanService
+from services.loan_service.user_loan import UserLoanService
 
 router = APIRouter(prefix="/loan", tags=["User Panel Loan API's"])
 loan_service = UserLoanService(LoanApplicant)
