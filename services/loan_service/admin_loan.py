@@ -64,7 +64,11 @@ class AdminLoanService(UserLoanService):
                 LoanApplicant, order_by, LoanApplicant.created_at
             ) if order_by else LoanApplicant.created_at
             order_direction = order_direction.lower() if order_direction else "desc"
-            final_offset = offset * limit if offset > 0 else 0
+
+            if offset != 0:
+                final_offset = (offset - 1) * limit
+            else:
+                final_offset = offset
 
             loans = self.db_interface.read_all_by_filters(
                 filter_expr=filter_expr,

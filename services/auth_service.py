@@ -461,8 +461,10 @@ class AdminAuthService(UserAuthService):
             order_direction = order_direction.lower() if order_direction else "asc"
 
             # ⏱ Calculate pagination offset
-            final_offset = offset * limit if offset > 0 else 0
-
+            if offset != 0:
+                final_offset = (offset - 1) * limit
+            else:
+                final_offset = offset
             # 📥 Fetch results
             users = self.db_interface.read_all_by_filters(
                 filter_expr=filter_expr,
