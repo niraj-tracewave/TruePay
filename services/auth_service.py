@@ -628,7 +628,7 @@ class AdminAuthService(UserAuthService):
             if form_data.pan_file:
                 pan_filter = [
                     UserDocument.user_id == user_id,
-                    UserDocument.document_type == DocumentType.pan.value
+                    UserDocument.document_type == DocumentType.PAN.value
                 ]
                 existing_pan_doc = user_document_interface.read_single_by_fields(pan_filter)
                 pan_data = {
@@ -658,7 +658,7 @@ class AdminAuthService(UserAuthService):
                 existing_aadhaar_doc = user_document_interface.read_single_by_fields(aadhaar_filter)
                 aadhaar_data = {
                     "user_id": user_id,
-                    "document_type": DocumentType.aadhar.value,
+                    "document_type": DocumentType.AADHAR.value,
                     "document_number": form_data.aadhaar_number,
                     "document_file": form_data.aadhaar_file
                 }

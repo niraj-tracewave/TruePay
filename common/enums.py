@@ -7,12 +7,6 @@ class UserRole(str, Enum):
     user = "user"
 
 
-class GenderEnum(str, Enum):
-    male = "Male"
-    female = "Female"
-    other = "Other"
-
-
 # Loan Enums
 class LoanStatus(str, Enum):
     PENDING = "PENDING"
