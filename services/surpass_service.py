@@ -44,7 +44,6 @@ class SurpassService:
                 "mobile": data.get("mobile"),
                 "credit_score": data.get("credit_score"),
                 "credit_report": data.get("credit_report", {}),
-                "credit_report_link": data.get("credit_report_link"),
                 "report_refresh_date": current_date,
                 "next_eligible_date": current_date + timedelta(days=30)
             }
@@ -59,7 +58,7 @@ class SurpassService:
                 "id": existing_id,
                 "credit_score": data.get("credit_score"),
                 "client_id": data.get("client_id"),
-            }, status_code, None
+            }, request_status_code, None
 
         # Logic conditions
         if not existing_report:
