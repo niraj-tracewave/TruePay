@@ -5,8 +5,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from common.enums import UserRole, DocumentType, DocumentStatus
+from common.enums import UserRole, DocumentType
 from db_domains import CreateUpdateTime
+from models.loan import BankAccount
 
 
 class User(CreateUpdateTime):
@@ -27,6 +28,9 @@ class User(CreateUpdateTime):
         "UserDocument",
         back_populates="user",
         cascade="all, delete-orphan"
+    )
+    bank_accounts = relationship(
+        "BankAccount", back_populates="user", cascade="all, delete-orphan", foreign_keys=[BankAccount.user_id]
     )
 
     def __repr__(self):

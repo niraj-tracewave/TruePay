@@ -2,7 +2,9 @@ import random
 import re
 import string
 
-from sqlalchemy import (Column, Integer, String, Float, Date, Enum, ForeignKey, UniqueConstraint, Index)
+from sqlalchemy import (
+    Column, Integer, String, Float, Date, Enum, ForeignKey, UniqueConstraint, Index, Boolean, DateTime
+)
 from sqlalchemy.orm import relationship
 
 from common.enums import IncomeProofType, DocumentType, DocumentStatus, LoanType, LoanStatus, GenderEnum
@@ -27,6 +29,7 @@ class LoanApplicant(CreateUpdateTime, CreateByUpdateBy):
     designation = Column(String(255), nullable=True)
     purpose_of_loan = Column(String(500), nullable=False)
     remarks = Column(String(500), nullable=True)
+    credit_score = Column(String, nullable=True, index=True)
     loan_type = Column(
         Enum(LoanType), default=LoanType.PERSONAL, server_default=LoanType.PERSONAL.value, nullable=False
     )
@@ -41,6 +44,7 @@ class LoanApplicant(CreateUpdateTime, CreateByUpdateBy):
 
     credit_score_range_rate = relationship("CreditScoreRangeRate")
     documents = relationship("LoanDocument", back_populates="applicant", cascade="all, delete-orphan")
+    bank_accounts = relationship("BankAccount", back_populates="applicant", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<LoanApplicant id={self.id} uid={self.loan_uid} name={self.name} status={self.status}>"
@@ -135,3 +139,26 @@ class LoanApprovalDetail(CreateUpdateTime, CreateByUpdateBy):
             f"approved={self.approved_loan_amount} interest={self.interest_rate_id}% "
             f"fee={self.processing_fee_amount}>"
         )
+
+
+class BankAccount(CreateUpdateTime, CreateByUpdateBy):
+    __tablename__ = "bank_accounts"
+    id = Column(Integer, primary_key=True, index=True)
+
+    applicant_id = Column(Integer, ForeignKey("loan_applicants.id"), index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+
+    account_holder_name = Column(String, nullable=False)
+    account_number = Column(String, nullable=False)
+    ifsc_code = Column(String, nullable=False)
+    type = Column(Enum("credit", "debit", name="bank_account_type"), nullable=False, index=True)
+    is_verified = Column(Boolean, default=False)
+    verified_at = Column(DateTime, nullable=True)
+
+    applicant = relationship("LoanApplicant", back_populates="bank_accounts")
+    user = relationship("User", back_populates="bank_accounts", foreign_keys=[user_id])
+
+    __table_args__ = (
+        UniqueConstraint("account_number", "ifsc_code", name="uq_account_number_ifsc"),
+        UniqueConstraint("applicant_id", "type", name="uq_loan_type"),
+    )
