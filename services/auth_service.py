@@ -712,7 +712,7 @@ class AdminAuthService(UserAuthService):
                 "data": []
             }
 
-    def delete_user(self, user_id: str):
+    def delete_user(self, logged_in_user_id: str, user_id: str):
         try:
             is_user_exists = self.db_interface.read_by_id(_id=user_id)
             if not is_user_exists:
@@ -723,13 +723,14 @@ class AdminAuthService(UserAuthService):
                     "status_code": status.HTTP_404_NOT_FOUND,
                     "data": []
                 }
-            with DBSession() as session:
-                session.query(User).filter(User.id == user_id).update(
-                    {
-                        User.is_deleted: True,
-                        User.is_active: False,
-                    }
-                )
+            # with DBSession() as session:
+            #     session.query(User).filter(User.id == user_id).update(
+            #         {
+            #             User.is_deleted: True,
+            #             User.is_active: False,
+            #         }
+            #     )
+            self.db_interface.soft_delete(filters=[User.id == user_id], modified_id=logged_in_user_id)
             return {
                 "success": True,
                 "message": gettext('deleted_successfully').format('User'),

@@ -247,6 +247,7 @@ class DBInterface:
 
             for item in items:
                 item.is_deleted = True
+                item.is_active = False
                 item.deleted_at = datetime.now()
                 if modified_id:
                     item.modified_by = modified_id

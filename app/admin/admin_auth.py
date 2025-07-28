@@ -82,8 +82,9 @@ async def update_user_details(user_id: str, form_data: UserUpdateData):
 
 
 @router.delete("/delete-user/{user_id}", summary="Delete User")
-async def delete_user(user_id: str):
-    response = admin_auth_service.delete_user(user_id)
+async def delete_user(request: Request, user_id: str):
+    user_state = getattr(request.state, "user", None)
+    response = admin_auth_service.delete_user(logged_in_user_id=user_state.get("id"), user_id=user_id)
     return ApiResponse.create_response(
         success=response.get("success"),
         message=response.get("message"),
