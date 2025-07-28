@@ -9,7 +9,7 @@ from app_logging import app_logger
 from common.cache_string import gettext
 from common.common_services.aws_services import AWSClient
 from common.enums import DocumentType, IncomeProofType, LoanType, UploadFileType
-from common.utils import format_loan_documents, validate_file_type, calculate_emi, calculate_emi_schedule
+from common.utils import format_loan_documents, validate_file_type, calculate_emi_schedule
 from db_domains import Base
 from db_domains.db import DBSession
 from db_domains.db_interface import DBInterface
@@ -48,6 +48,7 @@ class UserLoanService:
                 "designation": loan_application_form.designation,
                 "purpose_of_loan": loan_application_form.purpose_of_loan,
                 "loan_type": loan_application_form.loan_type,
+                "credit_score": loan_application_form.credit_score if loan_application_form.credit_score else 0,
                 "created_by": user_id,
                 "modified_by": user_id,
             }
@@ -165,6 +166,7 @@ class UserLoanService:
                     "created_at": loan.created_at,
                     "approved_loan": loan.approved_loan,
                     "effective_interest_rate": self.get_effective_rate(loan),
+                    "credit_score": loan.credit_score,
                     "documents": [
                         {
                             "id": doc.id,

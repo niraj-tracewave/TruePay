@@ -25,6 +25,7 @@ class LoanForm(BaseModel):
     aadhaar_number: constr(min_length=12, max_length=12)
     pan_file: Optional[str] = None
     aadhaar_file: Optional[str] = None
+    credit_score : Optional[str] = None
 
     proof_type: IncomeProofType
     document_type: DocumentType
@@ -89,6 +90,7 @@ class LoanApplicantResponseSchema(BaseModel):
     modified_by: int
     loan_type: str
     approved_loan: Optional[float]
+    credit_score: Optional[str]
 
     model_config = {
         "from_attributes": True
