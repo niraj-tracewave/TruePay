@@ -31,6 +31,15 @@ def format_user_response(user: User, documents: Optional[list[UserDocument]] = N
         pan_doc = next((doc for doc in documents if doc.document_type.value == "PAN"), None)
         aadhaar_doc = next((doc for doc in documents if doc.document_type.value == "AADHAR"), None)
 
+    cibil_data = {}
+    if user.cibil_reports:
+        user_cibil_data = user.cibil_reports[-1]
+        cibil_data = {
+            "credit_score": user_cibil_data.credit_score,
+            "refresh_date": user_cibil_data.report_refresh_date,
+            "next_eligible_date": user_cibil_data.next_eligible_date,
+        }
+
     return {
         "id": user.id,
         "name": user.name or "",
@@ -47,6 +56,7 @@ def format_user_response(user: User, documents: Optional[list[UserDocument]] = N
 
         "aadhaar_number": aadhaar_doc.document_number if aadhaar_doc else "",
         "aadhaar_document": aadhaar_doc.document_file if aadhaar_doc else "",
+        "cibil_info": cibil_data
     }
 
 

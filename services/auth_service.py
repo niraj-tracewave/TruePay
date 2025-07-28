@@ -139,7 +139,10 @@ class UserAuthService:
             with DBSession() as session:
                 user_with_docs = (
                     session.query(User)
-                    .options(selectinload(User.documents))
+                    .options(
+                        selectinload(User.documents),
+                        selectinload(User.cibil_reports)
+                    )
                     .filter(User.phone == phone_number)
                     .first()
                 )
@@ -153,7 +156,6 @@ class UserAuthService:
                     "is_new_user": is_new_user
                 }
             }
-
         except Exception as e:
             app_logger.exception(f'{gettext("error_verifying_OTP")}, Error: {e}')
             return {
@@ -260,7 +262,10 @@ class UserAuthService:
             with DBSession() as session:
                 user_with_docs = (
                     session.query(User)
-                    .options(selectinload(User.documents))
+                    .options(
+                        selectinload(User.documents),
+                        selectinload(User.cibil_reports)
+                    )
                     .filter(User.id == user_id)
                     .first()
                 )
@@ -313,7 +318,10 @@ class UserAuthService:
             with DBSession() as session:
                 user_with_docs = (
                     session.query(User)
-                    .options(selectinload(User.documents))
+                    .options(
+                        selectinload(User.documents),
+                        selectinload(User.cibil_reports)
+                    )
                     .filter(User.id == user_id)
                     .first()
                 )
@@ -397,8 +405,10 @@ class AdminAuthService(UserAuthService):
             with DBSession() as session:
                 user_with_docs = (
                     session.query(User)
-                    .options(selectinload(User.documents))
-                    .filter(User.id == admin.id)
+                    .options(
+                        selectinload(User.documents),
+                        selectinload(User.cibil_reports)
+                    ).filter(User.id == admin.id)
                     .first()
                 )
                 user_details = format_user_response(user_with_docs, user_with_docs.documents)
