@@ -8,8 +8,9 @@ from app_logging import app_logger
 from common.cache_string import gettext
 from common.common_services.surpass_service import SurpassRequestService
 from db_domains.db_interface import DBInterface
+from models.loan import BankAccount
 from models.surpass import UserCibilReport
-from schemas.surpass_schemas import GetCibilReportData, PanCardDetails
+from schemas.surpass_schemas import GetCibilReportData, PanCardDetails, BankDetails
 
 
 class SurpassService:
@@ -59,6 +60,9 @@ class SurpassService:
                 "id": existing_id,
                 "credit_score": data.get("credit_score"),
                 "client_id": data.get("client_id"),
+                "name": data.get("name"),
+                "refresh_date": report_data.get("report_refresh_date"),
+                "next_eligible_date": report_data.get("next_eligible_date"),
             }, request_status_code, None
 
         # Logic conditions
@@ -71,9 +75,13 @@ class SurpassService:
         else:
             credit_score_data = {
                 "id": existing_report.id,
+                "name": existing_report.name,
                 "credit_score": existing_report.credit_score,
                 "client_id": existing_report.client_id,
+                "refresh_date": existing_report.report_refresh_date,
+                "next_eligible_date": existing_report.next_eligible_date,
             }
+
             status_code = status.HTTP_200_OK
             error = None
 
@@ -285,6 +293,91 @@ class SurpassService:
             return {
                 "success": False,
                 "message": "Error validating PAN card",
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": {}
+            }
+
+    async def bank_verifications(self, user_id, bank_detail: BankDetails):
+        try:
+            app_logger.info(
+                f"[bank_verifications] Initiated by user_id={user_id} for account_number={bank_detail.id_number}"
+            )
+
+            bank_verification_payload_data = {
+                "id_number": bank_detail.id_number,
+                "ifsc": bank_detail.ifsc,
+                "ifsc_details": True
+            }
+
+            app_logger.debug(f"[bank_verifications] Sending payload to surpass API: {bank_verification_payload_data}")
+
+            response_data, request_status_code, request_error = await self.surpass_request_obj.make_request(
+                endpoint="bank-verification/", method="POST", data=bank_verification_payload_data
+            )
+
+            app_logger.info(
+                f"[bank_verifications] Received response from surpass API: status_code={request_status_code}"
+            )
+
+            if request_status_code != 200:
+                app_logger.info(f"Error Data => {response_data}")
+                error_message = request_error
+                if response_data:
+                    error_data = response_data.get("data")
+                    if error_data and error_data.get("remarks"):
+                        error_message = error_data.get("remarks")
+
+                app_logger.warning(f"[bank_verifications] Verification failed: {error_message}")
+                return {
+                    "success": False,
+                    "message": error_message,
+                    "status_code": request_status_code,
+                    "data": {}
+                }
+
+            data = response_data.get("data", {})
+
+            bank_account_interface = DBInterface(BankAccount)
+
+            bank_data = {
+                "user_id": bank_detail.user_id,
+                "applicant_id": bank_detail.applicant_id,
+                "account_number": bank_detail.id_number,
+                "ifsc_code": bank_detail.ifsc,
+                "account_holder_name": data.get("full_name") if data and data.get(
+                    "full_name"
+                ) else bank_detail.account_holder_name,
+                "bank_name": data.get("ifsc_details").get("bank_name") if data and data.get(
+                    "ifsc_details"
+                ) else bank_detail.bank_name,
+                "client_id": data.get("client_id") if data and data.get("client_id") else None,
+                "type": "credit",
+                "is_verified": True,
+                "verified_at": datetime.now(),
+                "created_by": user_id,
+                "modified_by": user_id,
+            }
+
+            app_logger.debug(f"[bank_verifications] Saving verified bank data to DB: {bank_data}")
+
+            bank_account_response = bank_account_interface.create(data=bank_data)
+
+            app_logger.info(f"[bank_verifications] Bank details saved successfully for user_id={user_id}")
+
+            return {
+                "success": True,
+                "message": "Bank details validated successfully",
+                "status_code": status.HTTP_200_OK,
+                "data": {
+                    "bank_details": bank_account_response
+                }
+            }
+
+        except Exception as e:
+            app_logger.exception(f"[bank_verifications] Exception occurred: {str(e)}")
+            return {
+                "success": False,
+                "message": "Error validating bank details",
                 "status_code": status.HTTP_400_BAD_REQUEST,
                 "data": {}
             }

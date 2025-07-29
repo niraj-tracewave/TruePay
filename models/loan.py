@@ -148,8 +148,10 @@ class BankAccount(CreateUpdateTime, CreateByUpdateBy):
     applicant_id = Column(Integer, ForeignKey("loan_applicants.id"), index=True)
     user_id = Column(Integer, ForeignKey("users.id"), index=True)
 
+    client_id = Column(String, nullable=True, index=True)
+    bank_name = Column(String, nullable=False, index=True)
     account_holder_name = Column(String, nullable=False)
-    account_number = Column(String, nullable=False)
+    account_number = Column(String, nullable=False, index=True)
     ifsc_code = Column(String, nullable=False)
     type = Column(Enum("credit", "debit", name="bank_account_type"), nullable=False, index=True)
     is_verified = Column(Boolean, default=False)

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request
 
 from common.response import ApiResponse
-from schemas.surpass_schemas import GetCibilReportData, PanCardDetails
+from schemas.surpass_schemas import GetCibilReportData, PanCardDetails, BankDetails
 from services.surpass_service import SurpassService
 
 router = APIRouter(prefix="/surpass", tags=["Surpass API's"])
@@ -36,6 +36,19 @@ async def get_cibil_report_api(request: Request, cibil_score_id: int):
 async def validate_pan_card(request: Request, pan_detail: PanCardDetails):
     user_state = getattr(request.state, "user", None)
     response = await surpass_service.validate_pan_card(user_id=user_state.get("id"), pan_detail=pan_detail)
+    return ApiResponse.create_response(
+        success=response.get("success"),
+        message=response.get("message"),
+        status_code=response.get("status_code"),
+        data=response.get("data")
+    )
+
+
+
+@router.post("/bank-verification", summary="Bank Verification")
+async def validate_pan_card(request: Request, bank_detail: BankDetails):
+    user_state = getattr(request.state, "user", None)
+    response = await surpass_service.bank_verifications(user_id=user_state.get("id"), bank_detail=bank_detail)
     return ApiResponse.create_response(
         success=response.get("success"),
         message=response.get("message"),

@@ -31,11 +31,18 @@ class ProcessingFee(CreateUpdateTime, CreateByUpdateBy):
     __tablename__ = "processing_fees"
 
     id = Column(Integer, primary_key=True, index=True)
-    rate_percent = Column(Float, nullable=False)
-    amount = Column(Integer, nullable=False)
+
+    # Credit Score Range
+    label = Column(String, nullable=False)
+    min_score = Column(Integer, nullable=True)
+    max_score = Column(Integer, nullable=True)
+
+    # Processing Fee
+    min_fee_percent = Column(Float, nullable=False)
+    max_fee_percent = Column(Float, nullable=True)
 
     __table_args__ = (
-        UniqueConstraint('rate_percent', 'amount', name='uq_processing_fee_rate_amount'),
-        Index('ix_processing_fee_rate_percent', 'rate_percent'),
-        Index('ix_processing_fee_amount', 'amount'),
+        UniqueConstraint('min_score', 'max_score', name='uq_proc_fee_score_loan'),
+        Index('ix_proc_fee_min_score', 'min_score'),
+        Index('ix_proc_fee_max_score', 'max_score'),
     )

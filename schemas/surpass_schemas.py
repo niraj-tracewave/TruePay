@@ -22,3 +22,12 @@ class GetCibilReportData(BaseModel):
 
 class PanCardDetails(BaseModel):
     pan_card: str
+
+
+class BankDetails(BaseModel):
+    applicant_id: int
+    user_id: int
+    id_number: str
+    ifsc: str
+    bank_name: str
+    account_holder_name: str
