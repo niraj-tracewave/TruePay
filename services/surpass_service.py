@@ -40,6 +40,7 @@ class SurpassService:
             report_data = {
                 "user_id": user_id,
                 "client_id": data.get("client_id"),
+                "name": data.get("name"),
                 "pan_number": data.get("pan"),
                 "mobile": data.get("mobile"),
                 "credit_score": data.get("credit_score"),

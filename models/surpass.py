@@ -13,6 +13,7 @@ class UserCibilReport(CreateUpdateTime):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
 
     client_id = Column(String, nullable=True, index=True)
+    name = Column(String, nullable=True, index=True)
     pan_number = Column(String, nullable=True, index=True)
     mobile = Column(String, nullable=True, index=True)
     credit_score = Column(String, nullable=True, index=True)

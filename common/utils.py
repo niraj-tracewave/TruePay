@@ -35,6 +35,7 @@ def format_user_response(user: User, documents: Optional[list[UserDocument]] = N
     if user.cibil_reports:
         user_cibil_data = user.cibil_reports[-1]
         cibil_data = {
+            "name": user_cibil_data.name,
             "credit_score": user_cibil_data.credit_score,
             "refresh_date": user_cibil_data.report_refresh_date,
             "next_eligible_date": user_cibil_data.next_eligible_date,
