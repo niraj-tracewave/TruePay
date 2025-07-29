@@ -32,3 +32,4 @@ class ProcessingFeeUpdate(BaseModel):
     min_score: Optional[int] = None
     max_score: Optional[int] = None
     min_fee_percent: Optional[float] = None
+    max_fee_percent: Optional[float] = None

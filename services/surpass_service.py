@@ -387,7 +387,12 @@ class SurpassService:
             app_logger.info(f"User {user_id} submitted valid PAN format. Initiating Surpass API validation.")
             response_data, request_status_code, request_error = await self.surpass_request_obj.make_request(
                 endpoint="digilocker/initialize", method="POST",
-                data={"data": {"signup_flow": True, "redirect_url": aadhar_details.redirect_url}}
+                data={
+                    "data": {
+                        "signup_flow": True, "redirect_url": aadhar_details.redirect_url,
+                        "webhook_url": aadhar_details.webhook_url
+                    }
+                }
             )
             if request_error:
                 return {

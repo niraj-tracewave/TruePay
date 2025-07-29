@@ -36,3 +36,4 @@ class BankDetails(BaseModel):
 class AadharCardDetails(BaseModel):
     signup_flow: bool = True
     redirect_url: str
+    webhook_url: str
