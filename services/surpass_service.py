@@ -10,7 +10,7 @@ from common.common_services.surpass_service import SurpassRequestService
 from db_domains.db_interface import DBInterface
 from models.loan import BankAccount
 from models.surpass import UserCibilReport
-from schemas.surpass_schemas import GetCibilReportData, PanCardDetails, BankDetails
+from schemas.surpass_schemas import GetCibilReportData, PanCardDetails, BankDetails, AadharCardDetails
 
 
 class SurpassService:
@@ -378,6 +378,37 @@ class SurpassService:
             return {
                 "success": False,
                 "message": "Error validating bank details",
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": {}
+            }
+
+    async def validate_aadhar_card(self, user_id, aadhar_details: AadharCardDetails):
+        try:
+            app_logger.info(f"User {user_id} submitted valid PAN format. Initiating Surpass API validation.")
+            response_data, request_status_code, request_error = await self.surpass_request_obj.make_request(
+                endpoint="digilocker/initialize", method="POST",
+                data={"data": {"signup_flow": True, "redirect_url": aadhar_details.redirect_url}}
+            )
+            if request_error:
+                return {
+                    "success": False,
+                    "message": request_error,
+                    "status_code": request_status_code,
+                    "data": {}
+                }
+
+            return {
+                "success": True,
+                "message": "Verify aadhar card with this link",
+                "status_code": status.HTTP_200_OK,
+                "data": response_data.get("data", {})
+            }
+
+        except Exception as e:
+            app_logger.error(f"Error validating Aadhar card for user {user_id}: {str(e)}")
+            return {
+                "success": False,
+                "message": "Error validating Aadhar Card",
                 "status_code": status.HTTP_400_BAD_REQUEST,
                 "data": {}
             }

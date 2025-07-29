@@ -31,3 +31,8 @@ class BankDetails(BaseModel):
     ifsc: str
     bank_name: str
     account_holder_name: str
+
+
+class AadharCardDetails(BaseModel):
+    signup_flow: bool = True
+    redirect_url: str
