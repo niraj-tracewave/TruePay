@@ -126,11 +126,70 @@ class UserLoanService:
             #NOTE: SEND EMAIL before sending successfully returning added
             try:
                 # Prepare email
-                subject = "Temp Subject"
-                body = "Temp Sender!"
+                subject = "New Loan Application Submitted"
                 recipient = loan_application_form.email
                 email_service_obj = EmailService()
-                background_tasks.add_task(email_service_obj.send_email, subject, body, recipient)
+                #NOTE: backup format [ignore for now]
+                # plain_body = (
+                #     f"Dear {loan_application_form.name},\n\n"
+                #     f"Thank you for applying for a loan with us.\n\n"
+                #     f"Applicant ID: {applicant_id}\n"
+                #     f"Loan Type: {loan_application_form.loan_type.name}\n"
+                #     f"Requested Loan Amount: ₹{loan_application_form.desired_loan}\n"
+                #     f"..."
+                # )
+                # html_body = f"""
+                # <html>
+                #     <body>
+                #         <p>Dear {loan_application_form.name},</p>
+                #         <p>Thank you for applying for a loan with us.</p>
+                #         <h4>Your Application Details:</h4>
+                #         <ul>
+                #             <li><strong>Applicant ID:</strong> {applicant_id}</li>
+                #             <li><strong>Loan Type:</strong> {loan_application_form.loan_type.name}</li>
+                #             <li><strong>Requested Loan Amount:</strong> ₹{loan_application_form.desired_loan}</li>
+                #             <li><strong>Annual Income:</strong> ₹{loan_application_form.annual_income}</li>
+                #             <li><strong>Credit Score:</strong> {loan_application_form.credit_score if loan_application_form.credit_score else 'N/A'}</li>
+                #             <li><strong>Purpose of Loan:</strong> {loan_application_form.purpose_of_loan}</li>
+                #         </ul>
+                #         <p>Our team will review your application and get back to you shortly.</p>
+                #         <p>Regards,<br/>Loan Processing Team</p>
+                #     </body>
+                # </html>
+                # """
+                plain_body = (
+                    f"Information:\n"
+                    f"A new loan application has been submitted.\n\n"
+                    f"🧾 Applicant Details:\n"
+                    f"Name: {loan_application_form.name}\n"
+                    f"Email: {loan_application_form.email}\n"
+                    f"Phone: {loan_application_form.phone_number}\n"
+                    f"Loan UID: {applicant_id}\n"
+                    f"Desired Loan Amount: ₹{loan_application_form.desired_loan}\n"
+                    f"Applied At: {applicant_obj.created_at.strftime('%d-%m-%Y %I:%M %p') if applicant_obj.created_at else 'N/A'}\n\n"
+                    f"Thanks & Regards,\n"
+                    f"Loan Processing Team"
+                )
+                html_body = f"""
+                <html>
+                    <body>
+                        <p>Information:</p>
+                        <p>A new loan application has been submitted.</p>
+                        <h4>🧾 Applicant Details:</h4>
+                        <ul>
+                            <li><strong>Name:</strong> {loan_application_form.name}</li>
+                            <li><strong>Email :</strong> {loan_application_form.email}</li>
+                            <li><strong>Phone:</strong> {loan_application_form.phone_number}</li>
+                            <li><strong>Loan UID:</strong> {applicant_id}</li>
+                            <li><strong>Desired Loan Amount:</strong>₹ {loan_application_form.desired_loan}</li>
+                            <li><strong>Applied At:</strong> {applicant_obj.created_at.strftime('%d-%m-%Y %I:%M %p') if applicant_obj.created_at else "N/A"} </li>
+                        </ul>
+                        <p>Thanks & Regards,<br/>   TruePay Loan Processing Team</p>
+                    </body>
+                </html>
+                """
+
+                background_tasks.add_task(email_service_obj.send_email, subject, plain_body, recipient, html_body)
             except Exception as e:
                 app_logger.error(f"Error scheduling email for {loan_application_form.email}: {str(e)}")
             return {
