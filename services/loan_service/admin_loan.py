@@ -45,7 +45,7 @@ class AdminLoanService(UserLoanService):
                     raise ValueError("Invalid date format. Use YYYY-MM-DD for both start_date and end_date.")
 
             # 🔍 Search filter
-            if search:
+            if search and search.strip() != "":
                 like_value = f"%{search.lower()}%"
                 filter_def["AND"].append(
                     {
@@ -132,7 +132,8 @@ class AdminLoanService(UserLoanService):
                     "name", "email", "phone_number", "annual_income", "desired_loan", "date_of_birth", "gender",
                     "address", "company_name", "company_address", "designation", "purpose_of_loan", "status",
                     "remarks", "is_deleted", "loan_type", "approved_loan", "interest_rate",
-                    "credit_score_range_rate_id", "custom_rate_percentage"
+                    "credit_score_range_rate_id", "credit_score_range_rate_percentage", "custom_rate_percentage",
+                    "processing_fee", "processing_fee_id", "custom_processing_fee", "tenure_months"
                 ] and v is not None
             }
             loan_data["modified_by"] = logged_in_user_id

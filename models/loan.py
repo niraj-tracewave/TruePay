@@ -40,7 +40,12 @@ class LoanApplicant(CreateUpdateTime, CreateByUpdateBy):
     credit_score_range_rate_id = Column(
         Integer, ForeignKey("credit_score_range_rate.id", ondelete="SET NULL"), nullable=True
     )
+    credit_score_range_rate_percentage = Column(Float, nullable=True)
     custom_rate_percentage = Column(Float, nullable=True)
+    processing_fee_id = Column(Integer, ForeignKey("processing_fees.id"), nullable=True)
+    processing_fee = Column(Float, nullable=True)
+    custom_processing_fee = Column(Float, nullable=True)
+    tenure_months = Column(Integer, nullable=True)
 
     credit_score_range_rate = relationship("CreditScoreRangeRate")
     documents = relationship("LoanDocument", back_populates="applicant", cascade="all, delete-orphan")

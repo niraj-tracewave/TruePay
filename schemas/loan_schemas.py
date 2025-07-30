@@ -25,7 +25,7 @@ class LoanForm(BaseModel):
     aadhaar_number: constr(min_length=12, max_length=12)
     pan_file: Optional[str] = None
     aadhaar_file: Optional[str] = None
-    credit_score : Optional[str] = None
+    credit_score: Optional[str] = None
 
     proof_type: IncomeProofType
     document_type: DocumentType
@@ -124,6 +124,11 @@ class UpdateLoanForm(LoanForm):
     document_file: Optional[List] = None
     credit_score_range_rate_id: Optional[int] = None
     custom_rate_percentage: Optional[float] = None
+    credit_score_range_rate_percentage: Optional[float] = None
+    processing_fee_id: Optional[int] = None
+    processing_fee: Optional[float] = None
+    custom_processing_fee: Optional[float] = None
+    tenure_months: Optional[int] = None
 
     property_document_file: Optional[List[str]] = None
 
@@ -134,6 +139,11 @@ class UpdateLoanForm(LoanForm):
         remarks = values.remarks
         credit_score_range_rate_id = values.credit_score_range_rate_id
         custom_rate_percentage = values.custom_rate_percentage
+        credit_score_range_rate_percentage = values.credit_score_range_rate_percentage
+        processing_fee_id = values.processing_fee_id
+        processing_fee = values.processing_fee
+        custom_processing_fee = values.custom_processing_fee
+        tenure_months = values.tenure_months
 
         if status and not remarks:
             raise ValueError('Remarks is required when updating loan status')
@@ -141,10 +151,13 @@ class UpdateLoanForm(LoanForm):
         if status == LoanStatus.APPROVED:
             if approved_loan is None:
                 raise ValueError("approved_loan is required when status is APPROVED")
-            if credit_score_range_rate_id is None and custom_rate_percentage is None:
-                raise ValueError(
-                    "Either credit_score_range_rate_id or custom_rate_percentage is required when status is APPROVED"
-                )
+            if (
+                    credit_score_range_rate_id is None or credit_score_range_rate_percentage is None) and custom_rate_percentage is None:
+                raise ValueError("Interest Rate is required when status is APPROVED")
+            if (not processing_fee_id or not processing_fee) and not custom_processing_fee:
+                raise ValueError("Processing Fee is required when status is APPROVED")
+            if tenure_months is None:
+                raise ValueError("Tenure Months is required when status is APPROVED")
 
         if values.loan_type == LoanType.LAP and not values.property_document_file:
             raise ValueError('Property Document File is required for LAP loan type')

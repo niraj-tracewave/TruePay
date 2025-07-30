@@ -17,6 +17,7 @@ from common.utils import format_user_response, PasswordHashing
 from db_domains import Base
 from db_domains.db import DBSession
 from db_domains.db_interface import DBInterface
+from models.surpass import UserCibilReport
 from models.user import User, UserDocument
 from schemas.auth_schemas import LoginRequest, VerifyOTPRequest, RefreshToken, UpdateProfileRequest, AdminLoginRequest, \
     AddUserRequest, UserResponseSchema, UserUpdateData
@@ -452,7 +453,7 @@ class AdminAuthService(UserAuthService):
                 filter_def["AND"].append({"field": "is_active", "op": "==", "value": is_active})
 
             # 🔎 Add search filter
-            if search:
+            if search and search.strip() != "":
                 like_value = f"%{search.lower()}%"
                 filter_def["AND"].append(
                     {
@@ -475,13 +476,17 @@ class AdminAuthService(UserAuthService):
                 final_offset = (offset - 1) * limit
             else:
                 final_offset = offset
-            # 📥 Fetch results
-            users = self.db_interface.read_all_by_filters(
+
+            users = self.db_interface.read_all_by_filters_with_joins(
                 filter_expr=filter_expr,
                 order_by=order_column,
                 order_direction=order_direction,
                 limit=limit,
-                offset=final_offset
+                offset=final_offset,
+                join_model=UserCibilReport,
+                join_on_left="id",
+                join_on_right="user_id",
+                relationship_name="cibil_reports"
             )
 
             user_list = [format_user_response(user) for user in users]

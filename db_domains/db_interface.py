@@ -4,7 +4,7 @@ from typing import Any, Optional, Sequence, Dict, List
 
 from sqlalchemy import and_, or_, not_, desc, asc
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from db_domains import Base
 from db_domains.db import DBSession
@@ -125,6 +125,40 @@ class DBInterface:
             return results
         except Exception as e:
             session.close()
+            raise Exception(f"Error reading with filters in {self.db_class.__name__}: {str(e)}")
+        finally:
+            session.close()
+
+    def read_all_by_filters_with_joins(
+            self, filter_expr: Optional[Any] = None, order_by: Optional[Any] = None,
+            limit: int = 10, offset: int = 0, order_direction: str = "asc", join_model: Optional[Any] = None,
+            join_on_left: str = "id", join_on_right: str = None,
+            relationship_name: Optional[str] = None
+    ):
+        session: Session = DBSession()
+        try:
+            query = session.query(self.db_class)
+
+            # Use eager loading if a relationship name is provided
+            if relationship_name:
+                query = query.options(joinedload(getattr(self.db_class, relationship_name)))
+
+            # If actual join is needed (for filtering or inner join behavior)
+            if join_model:
+                on_clause = getattr(self.db_class, join_on_left) == getattr(join_model, join_on_right)
+                query = query.outerjoin(join_model, on_clause)
+
+            if filter_expr is not None:
+                query = query.filter(filter_expr)
+
+            if order_by is not None:
+                order = desc(order_by) if order_direction == "desc" else asc(order_by)
+                query = query.order_by(order)
+
+            query = query.offset(offset).limit(limit)
+
+            return query.all()
+        except Exception as e:
             raise Exception(f"Error reading with filters in {self.db_class.__name__}: {str(e)}")
         finally:
             session.close()
