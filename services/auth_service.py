@@ -750,3 +750,57 @@ class AdminAuthService(UserAuthService):
                 "status_code": status.HTTP_400_BAD_REQUEST,
                 "data": []
             }
+
+    def get_profile_details(self, user_id: str) -> Dict[str, Any]:
+        try:
+            app_logger.info(f"Fetching profile for user_id: {user_id}")
+            user_filter = [
+                User.id == user_id, User.is_deleted == False, User.role == UserRole.user
+            ]
+
+            user_filter = self.db_interface.read_single_by_fields(fields=user_filter)
+            if not user_filter:
+                return {
+                    "success": False,
+                    "message": gettext("does_not_exists").format("User"),
+                    "status_code": status.HTTP_404_NOT_FOUND,
+                    "data": {}
+                }
+
+            with DBSession() as session:
+                user_with_docs = (
+                    session.query(User)
+                    .options(
+                        selectinload(User.documents),
+                        selectinload(User.cibil_reports)
+                    )
+                    .filter(User.id == user_id)
+                    .first()
+                )
+                user_details = format_user_response(user_with_docs, user_with_docs.documents)
+            return {
+                "success": True,
+                "message": gettext("retrieved_successfully").format("Profile Details"),
+                "data": {
+                    "user": user_details,
+                },
+                "status_code": status.HTTP_200_OK,
+            }
+        except SQLAlchemyError as e:
+            app_logger.error(f"DB Error: {gettext('error_fetching_data_from_db').format('Profile Details')}: {str(e)}")
+            return {
+                "success": False,
+                "message": str(e),
+                "status_code": gettext("something_went_wrong"),
+                "data": {}
+            }
+        except Exception as e:
+            app_logger.error(
+                f"General Error: {gettext('error_fetching_data_from_db').format('Profile Details')}: {str(e)}"
+            )
+            return {
+                "success": False,
+                "message": str(e),
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": {}
+            }
