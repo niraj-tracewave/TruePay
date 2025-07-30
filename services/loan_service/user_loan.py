@@ -1,3 +1,4 @@
+import os
 import uuid
 from typing import Dict, Any, List, Optional
 
@@ -127,7 +128,7 @@ class UserLoanService:
             try:
                 # Prepare email
                 subject = "New Loan Application Submitted"
-                recipient = loan_application_form.email
+                recipient =  os.environ.get("RECIPIENT_ADMIN_EMAIL", "") 
                 email_service_obj = EmailService()
                 #NOTE: backup format [ignore for now]
                 # plain_body = (
@@ -173,23 +174,23 @@ class UserLoanService:
                 html_body = f"""
                 <html>
                     <body>
-                        <p>Information:</p>
                         <p>A new loan application has been submitted.</p>
-                        <h4>🧾 Applicant Details:</h4>
+                        <h4>Applicant Details:</h4>
                         <ul>
                             <li><strong>Name:</strong> {loan_application_form.name}</li>
                             <li><strong>Email :</strong> {loan_application_form.email}</li>
                             <li><strong>Phone:</strong> {loan_application_form.phone_number}</li>
-                            <li><strong>Loan UID:</strong> {applicant_id}</li>
+                            <li><strong>Loan UID:</strong> {applicant_obj.loan_uid}</li>
                             <li><strong>Desired Loan Amount:</strong>₹ {loan_application_form.desired_loan}</li>
                             <li><strong>Applied At:</strong> {applicant_obj.created_at.strftime('%d-%m-%Y %I:%M %p') if applicant_obj.created_at else "N/A"} </li>
                         </ul>
+                        <p>Kindly go to <a href="https://admin.truepay.co.in/">https://admin.truepay.co.in/</a> admin panel and check the details.</p>
                         <p>Thanks & Regards,<br/>   TruePay Loan Processing Team</p>
                     </body>
                 </html>
                 """
-
-                background_tasks.add_task(email_service_obj.send_email, subject, plain_body, recipient, html_body)
+                if os.environ.get("IS_PROD").lower() == "true":
+                    background_tasks.add_task(email_service_obj.send_email, subject, plain_body, recipient, html_body)
             except Exception as e:
                 app_logger.error(f"Error scheduling email for {loan_application_form.email}: {str(e)}")
             return {

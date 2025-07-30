@@ -29,6 +29,8 @@ class Setting(BaseSettings):
     WHITELIST_MOBILE_NUMBER: str
     SMTP_USER_EMAIL: str
     SMTP_PASSWORD: str
+    IS_PROD: str
+    RECIPIENT_ADMIN_EMAIL: str
 
     # Default Log type
     LOG_LEVEL: str
@@ -88,6 +90,8 @@ class Config(object):
     WHITELIST_MOBILE_NUMBER = app_settings.WHITELIST_MOBILE_NUMBER
     SMTP_USER_EMAIL= app_settings.SMTP_USER_EMAIL
     SMTP_PASSWORD= app_settings.SMTP_PASSWORD
+    IS_PROD = app_settings.IS_PROD
+    RECIPIENT_ADMIN_EMAIL = app_settings.RECIPIENT_ADMIN_EMAIL
 
 
 class LocalConfig(Config):
