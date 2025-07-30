@@ -1,13 +1,14 @@
 import uuid
 from typing import Dict, Any, List, Optional
 
-from fastapi import UploadFile
+from fastapi import UploadFile, BackgroundTasks
 from sqlalchemy.orm import selectinload, with_loader_criteria
 from starlette import status
 
 from app_logging import app_logger
 from common.cache_string import gettext
 from common.common_services.aws_services import AWSClient
+from common.common_services.email_service import EmailService
 from common.enums import DocumentType, IncomeProofType, LoanType, UploadFileType
 from common.utils import format_loan_documents, validate_file_type, calculate_emi_schedule
 from db_domains import Base
@@ -29,7 +30,7 @@ class UserLoanService:
             return loan.credit_score_range_rate.rate_percentage
         return 0.0
 
-    def add_loan_application(self, user_id: str, loan_application_form: LoanForm):
+    def add_loan_application(self, user_id: str, loan_application_form: LoanForm, background_tasks: BackgroundTasks):
         try:
             app_logger.info(f"User {user_id} initiated loan application.")
 
@@ -121,7 +122,17 @@ class UserLoanService:
             loan_document_interface = DBInterface(LoanDocument)
             document_instances = loan_document_interface.bulk_create(data_list=all_documents)
             app_logger.info(f"Documents uploaded successfully for applicant ID {applicant_id}.")
-
+            
+            #NOTE: SEND EMAIL before sending successfully returning added
+            try:
+                # Prepare email
+                subject = "Temp Subject"
+                body = "Temp Sender!"
+                recipient = loan_application_form.email
+                email_service_obj = EmailService()
+                background_tasks.add_task(email_service_obj.send_email, subject, body, recipient)
+            except Exception as e:
+                app_logger.error(f"Error scheduling email for {loan_application_form.email}: {str(e)}")
             return {
                 "success": True,
                 "message": gettext("added_successfully").format("Loan Application"),
