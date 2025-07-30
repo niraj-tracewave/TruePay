@@ -385,16 +385,30 @@ class SurpassService:
     async def validate_aadhar_card(self, user_id, aadhar_details: AadharCardDetails):
         try:
             app_logger.info(f"User {user_id} submitted valid PAN format. Initiating Surpass API validation.")
-            response_data, request_status_code, request_error = await self.surpass_request_obj.make_request(
-                endpoint="digilocker/initialize", method="POST",
-                data={
-                    "data": {
-                        "signup_flow": True, "redirect_url": aadhar_details.redirect_url,
-                        "webhook_url": aadhar_details.webhook_url
-                    }
+
+            request_payload = {
+                "data": {
+                    "signup_flow": True,
+                    "redirect_url": aadhar_details.redirect_url,
+                    "webhook_url": aadhar_details.webhook_url
                 }
+            }
+
+            app_logger.debug(f"User {user_id} - Request Payload for Surpass API: {request_payload}")
+
+            response_data, request_status_code, request_error = await self.surpass_request_obj.make_request(
+                endpoint="digilocker/initialize",
+                method="POST",
+                data=request_payload
             )
+
+            app_logger.debug(f"User {user_id} - Surpass API Response Status: {request_status_code}")
+            app_logger.debug(f"User {user_id} - Surpass API Response Data: {response_data}")
             if request_error:
+                app_logger.error(
+                    f"User {user_id} - Surpass API returned an error: {request_error} "
+                    f"with status code {request_status_code}"
+                )
                 return {
                     "success": False,
                     "message": request_error,
@@ -404,13 +418,15 @@ class SurpassService:
 
             return {
                 "success": True,
-                "message": "Verify aadhar card with this link",
+                "message": "Verify Aadhar card with this link",
                 "status_code": status.HTTP_200_OK,
                 "data": response_data.get("data", {})
             }
 
         except Exception as e:
-            app_logger.error(f"Error validating Aadhar card for user {user_id}: {str(e)}")
+            import traceback
+            app_logger.error(f"Exception occurred while validating Aadhar card for user {user_id}: {str(e)}")
+            app_logger.error(f"Traceback:\n{traceback.format_exc()}")
             return {
                 "success": False,
                 "message": "Error validating Aadhar Card",

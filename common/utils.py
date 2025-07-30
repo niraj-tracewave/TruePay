@@ -69,9 +69,9 @@ def format_loan_documents(documents: list) -> list[dict]:
         formatted_docs.append(
             {
                 "id": doc.id,
-                "document_type": doc.document_type.value.lower() if hasattr(doc.document_type, "value") else str(
+                "document_type": doc.document_type.value if hasattr(doc.document_type, "value") else str(
                     doc.document_type
-                ).lower(),
+                ),
                 "document_number": doc.document_number or "",
                 "document_file": doc.document_file or "",
                 "status": doc.status.value if hasattr(doc.status, "value") else str(doc.status),
