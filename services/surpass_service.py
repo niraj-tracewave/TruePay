@@ -24,6 +24,7 @@ class SurpassService:
 
         existing_report = user_cibil_report.read_single_by_fields(
             fields=[
+                UserCibilReport.user_id == user_id,
                 UserCibilReport.pan_number == data_dict.get("pan"),
                 UserCibilReport.mobile == data_dict.get("mobile")
             ]
