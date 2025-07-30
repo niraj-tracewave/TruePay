@@ -133,8 +133,6 @@ class LoanApprovalDetail(CreateUpdateTime, CreateByUpdateBy):
 
     # Relationships
     applicant = relationship("LoanApplicant", backref="approval_detail", uselist=False)
-    interest_rate = relationship("CreditScoreRangeRate")
-    processing_fee = relationship("ProcessingFee")
 
     __table_args__ = (
         UniqueConstraint('applicant_id', name='uq_approval_applicant'),  # redundant due to unique=True, but explicit
