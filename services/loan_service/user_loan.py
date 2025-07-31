@@ -11,6 +11,7 @@ from common.cache_string import gettext
 from common.common_services.aws_services import AWSClient
 from common.common_services.email_service import EmailService
 from common.enums import DocumentType, IncomeProofType, LoanType, UploadFileType
+from common.email_html_utils import build_loan_email_bodies
 from common.utils import format_loan_documents, validate_file_type, calculate_emi_schedule
 from db_domains import Base
 from db_domains.db import DBSession
@@ -130,65 +131,7 @@ class UserLoanService:
                 subject = "New Loan Application Submitted"
                 recipient =  os.environ.get("RECIPIENT_ADMIN_EMAIL", "") 
                 email_service_obj = EmailService()
-                #NOTE: backup format [ignore for now]
-                # plain_body = (
-                #     f"Dear {loan_application_form.name},\n\n"
-                #     f"Thank you for applying for a loan with us.\n\n"
-                #     f"Applicant ID: {applicant_id}\n"
-                #     f"Loan Type: {loan_application_form.loan_type.name}\n"
-                #     f"Requested Loan Amount: ₹{loan_application_form.desired_loan}\n"
-                #     f"..."
-                # )
-                # html_body = f"""
-                # <html>
-                #     <body>
-                #         <p>Dear {loan_application_form.name},</p>
-                #         <p>Thank you for applying for a loan with us.</p>
-                #         <h4>Your Application Details:</h4>
-                #         <ul>
-                #             <li><strong>Applicant ID:</strong> {applicant_id}</li>
-                #             <li><strong>Loan Type:</strong> {loan_application_form.loan_type.name}</li>
-                #             <li><strong>Requested Loan Amount:</strong> ₹{loan_application_form.desired_loan}</li>
-                #             <li><strong>Annual Income:</strong> ₹{loan_application_form.annual_income}</li>
-                #             <li><strong>Credit Score:</strong> {loan_application_form.credit_score if loan_application_form.credit_score else 'N/A'}</li>
-                #             <li><strong>Purpose of Loan:</strong> {loan_application_form.purpose_of_loan}</li>
-                #         </ul>
-                #         <p>Our team will review your application and get back to you shortly.</p>
-                #         <p>Regards,<br/>Loan Processing Team</p>
-                #     </body>
-                # </html>
-                # """
-                plain_body = (
-                    f"Information:\n"
-                    f"A new loan application has been submitted.\n\n"
-                    f"🧾 Applicant Details:\n"
-                    f"Name: {loan_application_form.name}\n"
-                    f"Email: {loan_application_form.email}\n"
-                    f"Phone: {loan_application_form.phone_number}\n"
-                    f"Loan UID: {applicant_id}\n"
-                    f"Desired Loan Amount: ₹{loan_application_form.desired_loan}\n"
-                    f"Applied At: {applicant_obj.created_at.strftime('%d-%m-%Y %I:%M %p') if applicant_obj.created_at else 'N/A'}\n\n"
-                    f"Thanks & Regards,\n"
-                    f"Loan Processing Team"
-                )
-                html_body = f"""
-                <html>
-                    <body>
-                        <p>A new loan application has been submitted.</p>
-                        <h4>Applicant Details:</h4>
-                        <ul>
-                            <li><strong>Name:</strong> {loan_application_form.name}</li>
-                            <li><strong>Email :</strong> {loan_application_form.email}</li>
-                            <li><strong>Phone:</strong> {loan_application_form.phone_number}</li>
-                            <li><strong>Loan UID:</strong> {applicant_obj.loan_uid}</li>
-                            <li><strong>Desired Loan Amount:</strong>₹ {loan_application_form.desired_loan}</li>
-                            <li><strong>Applied At:</strong> {applicant_obj.created_at.strftime('%d-%m-%Y %I:%M %p') if applicant_obj.created_at else "N/A"} </li>
-                        </ul>
-                        <p>Kindly go to <a href="https://admin.truepay.co.in/">https://admin.truepay.co.in/</a> admin panel and check the details.</p>
-                        <p>Thanks & Regards,<br/>   TruePay Loan Processing Team</p>
-                    </body>
-                </html>
-                """
+                plain_body, html_body = build_loan_email_bodies(loan_application_form, applicant_obj, applicant_id)
                 if os.environ.get("IS_PROD").lower() == "true":
                     background_tasks.add_task(email_service_obj.send_email, subject, plain_body, recipient, html_body)
             except Exception as e:
