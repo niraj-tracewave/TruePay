@@ -28,6 +28,9 @@ class AdminLoanService(UserLoanService):
                     {"field": "is_deleted", "op": "==", "value": False}
                 ]
             }
+            total_loans = self.db_interface.count_all_by_fields(
+                filters=[LoanApplicant.is_deleted == False]
+            )
 
             if status_filter:
                 filter_def["AND"].append({"field": "status", "op": "==", "value": status_filter})
@@ -110,7 +113,7 @@ class AdminLoanService(UserLoanService):
                 "status_code": status.HTTP_200_OK if loan_list else status.HTTP_404_NOT_FOUND,
                 "data": {
                     "loan_applications": loan_list,
-                    "total_count": len(loan_list)
+                    "total_count": total_loans
                 }
             }
 
