@@ -136,7 +136,7 @@ class CreditScoreService:
 
     def get_all_credit_range_rates(self, user_id: int) -> dict:
         try:
-            all_entries = self.db_interface.read_all()
+            all_entries = self.db_interface.read_by_fields(fields=[CreditScoreRangeRate.is_deleted == False])
             result = [
                 {
                     "id": entry.id,
@@ -314,7 +314,7 @@ class CreditScoreService:
     def get_all_processing_fees(self, user_id: int) -> dict:
         try:
             processing_fee_db_interface = DBInterface(ProcessingFee)
-            all_entries = processing_fee_db_interface.read_all()
+            all_entries = processing_fee_db_interface.read_by_fields(fields=[ProcessingFee.is_deleted == False])
             if not all_entries:
                 return {
                     "success": True,
