@@ -9,6 +9,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app_logging import app_logger
 from common.cache_string import gettext
 from common.common_services.jwt_service import JWTService
+from common.enums import UserRole
 from common.response import ApiResponse
 from config import app_config
 
@@ -90,6 +91,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 payload = json.loads(response_body.decode('utf-8'))
 
             user_id = payload.get("id")
+            user_role = payload.get("user_role")
             if not user_id:
                 app_logger.error("[AuthMiddleware] Invalid token payload: missing user ID")
                 return ApiResponse.create_response(
@@ -99,6 +101,16 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 )
 
             app_logger.info(f"[AuthMiddleware] Token verified | user_id: {user_id}")
+
+            is_admin_route = request_path.startswith(f"{API_PREFIX}/admin")
+            if is_admin_route and user_role != UserRole.admin:
+                app_logger.warning("[AuthMiddleware] Non-admin tried accessing admin route")
+                return ApiResponse.create_response(
+                    success=False,
+                    message=gettext("unauthorized_access"),
+                    status_code=status.HTTP_403_FORBIDDEN
+                )
+
             request.state.user = payload
 
         except jwt.ExpiredSignatureError:

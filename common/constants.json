@@ -29,5 +29,6 @@
     "error_deleting_data_to_db": "Error while deleting the {} details from the Database",
     "logged_in_successfully": "User Logged in successfully",
     "invalid_password": "Invalid Password",
-    "access_token_required": "Access token required"
+    "access_token_required": "Access token required",
+    "unauthorized_access": "You are not authorized to access this resource."
 }
