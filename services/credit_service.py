@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 
 from starlette import status
@@ -101,6 +102,9 @@ class CreditScoreService:
                 update_fields["max_score"] = form_data.max_score
             if form_data.rate_percentage is not None:
                 update_fields["rate_percentage"] = form_data.rate_percentage
+            if form_data.is_deleted is not None:
+                update_fields["is_deleted"] = form_data.is_deleted
+                update_fields["deleted_at"] = datetime.now()
 
             if update_fields:
                 update_fields["modified_by"] = user_id
@@ -277,6 +281,9 @@ class CreditScoreService:
                 update_fields["min_fee_percent"] = form_data.min_fee_percent
             if form_data.max_fee_percent is not None:
                 update_fields["max_fee_percent"] = form_data.max_fee_percent
+            if form_data.is_deleted is not None:
+                update_fields["is_deleted"] = form_data.is_deleted
+                update_fields["deleted_at"] = datetime.now()
 
             if update_fields:
                 update_fields["modified_by"] = user_id

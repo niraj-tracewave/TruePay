@@ -18,6 +18,7 @@ class CombinedLoanConfigUpdate(BaseModel):
     min_score: Optional[int] = None
     max_score: Optional[int] = None
     rate_percentage: Optional[float] = None
+    is_deleted: Optional[bool] = None
 
 
 class ProcessingFeeCreate(BaseModel):
@@ -33,3 +34,5 @@ class ProcessingFeeUpdate(BaseModel):
     max_score: Optional[int] = None
     min_fee_percent: Optional[float] = None
     max_fee_percent: Optional[float] = None
+    is_deleted: Optional[bool] = None
+
