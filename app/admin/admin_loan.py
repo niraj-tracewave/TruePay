@@ -51,7 +51,7 @@ def get_all_loan(loan_id: str):
 @router.post("/create-loan-application", summary="Create Loan Application")
 async def create_loan_application(request: Request, form_data: LoanForm, background_tasks: BackgroundTasks):
     user_state = getattr(request.state, "user", None)
-    response = admin_loan_service.add_loan_application(user_id=user_state.get("id"), loan_application_form=form_data, background_tasks=background_tasks)
+    response = admin_loan_service.add_loan_application(user_id=user_state.get("id"), loan_application_form=form_data, background_tasks=background_tasks, is_created_by_admin=True)
 
     return ApiResponse.create_response(
         success=response.get("success"),

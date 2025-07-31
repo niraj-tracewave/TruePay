@@ -16,7 +16,7 @@ loan_service = UserLoanService(LoanApplicant)
 @router.post("/add-loan-application", summary="Add Loan Application")
 def add_loan_application(request: Request, form_data: LoanForm, background_tasks:BackgroundTasks):
     user_state = getattr(request.state, "user", None)
-    response = loan_service.add_loan_application(user_id=user_state.get("id"), loan_application_form=form_data, background_tasks= background_tasks)
+    response = loan_service.add_loan_application(user_id=user_state.get("id"), loan_application_form=form_data, background_tasks= background_tasks, is_created_by_admin=False)
 
     return ApiResponse.create_response(
         success=response.get("success"),

@@ -32,7 +32,7 @@ class UserLoanService:
             return loan.credit_score_range_rate.rate_percentage
         return 0.0
 
-    def add_loan_application(self, user_id: str, loan_application_form: LoanForm, background_tasks: BackgroundTasks):
+    def add_loan_application(self, user_id: str, loan_application_form: LoanForm, background_tasks: BackgroundTasks, is_created_by_admin: bool):
         try:
             app_logger.info(f"User {user_id} initiated loan application.")
 
@@ -125,14 +125,14 @@ class UserLoanService:
             document_instances = loan_document_interface.bulk_create(data_list=all_documents)
             app_logger.info(f"Documents uploaded successfully for applicant ID {applicant_id}.")
             
-            #NOTE: SEND EMAIL before sending successfully returning added
+            #NOTE: Send Email Feature 
             try:
                 # Prepare email
                 subject = "New Loan Application Submitted"
                 recipient =  os.environ.get("RECIPIENT_ADMIN_EMAIL", "") 
                 email_service_obj = EmailService()
                 plain_body, html_body = build_loan_email_bodies(loan_application_form, applicant_obj, applicant_id)
-                if os.environ.get("IS_PROD").lower() == "true":
+                if os.environ.get("IS_PROD").lower() == "true" and is_created_by_admin == False:
                     background_tasks.add_task(email_service_obj.send_email, subject, plain_body, recipient, html_body)
             except Exception as e:
                 app_logger.error(f"Error scheduling email for {loan_application_form.email}: {str(e)}")
