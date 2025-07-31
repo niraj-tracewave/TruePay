@@ -171,4 +171,55 @@ class UpdateLoanForm(LoanForm):
         if values.loan_type == LoanType.LAP and not values.property_document_file:
             raise ValueError('Property Document File is required for LAP loan type')
 
+        if values.custom_processing_fee == 0:
+            values.custom_processing_fee = None
+
+        if values.custom_rate_percentage == 0:
+            values.custom_rate_percentage = None
+
         return values
+
+
+class UserApprovedLoanForm(BaseModel):
+    applicant_id: int
+    approved_interest_rate: float
+    final_interest_rate: float
+    custom_interest_rate: float
+    approved_processing_fee: float
+    processing_fee_amount: float
+    custom_processing_fee: float
+    approved_tenure_months: int
+    final_tenure_months: int
+    user_accepted_amount: float
+    approved_loan_amount: float
+
+    @model_validator(mode="after")
+    def validate_approved_fields(self) -> 'UserApprovedLoanForm':
+        # ❗ Interest Rate check: All 3 are required
+        if (
+                (self.approved_interest_rate is None or self.final_interest_rate is None) and
+                self.custom_interest_rate is None
+        ):
+            raise ValueError("All interest rate fields are required for Final Approval.")
+
+        # ❗ Processing Fee check: All 3 are required
+        if (
+                (self.approved_processing_fee is None or self.processing_fee_amount is None) and
+                self.custom_processing_fee is None
+        ):
+            raise ValueError("All processing fee fields are required for Final Approval.")
+
+        # ❗ Tenure check
+        if self.approved_tenure_months is None or self.final_tenure_months is None:
+            raise ValueError("Tenure Months is required for Final Approval")
+
+        if self.user_accepted_amount is None and self.approved_loan_amount is None:
+            raise ValueError("User Accepted Amount and Approved Loan Amount is required for Final Approval")
+
+        if self.custom_processing_fee == 0:
+            self.custom_processing_fee = None
+
+        if self.custom_interest_rate == 0:
+            self.custom_interest_rate = None
+
+        return self

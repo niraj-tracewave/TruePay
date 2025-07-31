@@ -28,9 +28,18 @@ class CreditScoreService:
                 fields=[
                     CreditScoreRangeRate.min_score == form_data.min_score,
                     CreditScoreRangeRate.max_score == form_data.max_score,
-                    CreditScoreRangeRate.loan_type == form_data.loan_type
+                    CreditScoreRangeRate.loan_type == form_data.loan_type,
+                    CreditScoreRangeRate.is_deleted == False,
                 ]
             )
+
+            if existing_entry:
+                return {
+                    "success": True,
+                    "message": "Credit score and interest rate added successfully",
+                    "status_code": status.HTTP_200_OK,
+                    "data": {}
+                }
 
             data = {
                 "label": form_data.label,
@@ -40,17 +49,12 @@ class CreditScoreService:
                 "rate_percentage": form_data.rate_percentage
             }
 
-            if not existing_entry:
-                app_logger.info(
-                    f"[UserID: {user_id}] Creating new credit score + interest rate entry: {form_data.dict()}"
-                )
-                data["created_by"] = user_id
-                print(f"Data => {data}")
-                new_entry = self.db_interface.create(data=data)
-            else:
-                app_logger.info(f"[UserID: {user_id}] Updating existing entry ID={existing_entry.id}")
-                data["modified_by"] = user_id
-                new_entry = self.db_interface.update(existing_entry.id, data=data)
+            app_logger.info(
+                f"[UserID: {user_id}] Creating new credit score + interest rate entry: {form_data.dict()}"
+            )
+            data["created_by"] = user_id
+            print(f"Data => {data}")
+            new_entry = self.db_interface.create(data=data)
 
             return {
                 "success": True,
@@ -213,8 +217,17 @@ class CreditScoreService:
                 fields=[
                     ProcessingFee.min_score == form_data.min_score,
                     ProcessingFee.max_score == form_data.max_score,
+                    ProcessingFee.is_deleted == False,
                 ]
             )
+
+            if existing_entry:
+                return {
+                    "success": False,
+                    "message": "Processing fee already exists for this range",
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "data": {}
+                }
 
             data = {
                 "label": form_data.label,
@@ -222,16 +235,10 @@ class CreditScoreService:
                 "max_score": form_data.max_score,
                 "min_fee_percent": form_data.min_fee_percent,
                 "max_fee_percent": form_data.max_fee_percent,
+                "created_by": user_id
             }
-
-            if not existing_entry:
-                data["created_by"] = user_id
-                app_logger.info(f"[UserID: {user_id}] Creating new ProcessingFee: {form_data.dict()}")
-                new_entry = processing_fee_db_interface.create(data=data)
-            else:
-                data["modified_by"] = user_id
-                app_logger.info(f"[UserID: {user_id}] Updating existing ProcessingFee ID={existing_entry.id}")
-                new_entry = processing_fee_db_interface.update(existing_entry.id, data=data)
+            app_logger.info(f"[UserID: {user_id}] Creating new ProcessingFee: {form_data.dict()}")
+            new_entry = processing_fee_db_interface.create(data=data)
 
             return {
                 "success": True,

@@ -30,5 +30,6 @@
     "logged_in_successfully": "User Logged in successfully",
     "invalid_password": "Invalid Password",
     "access_token_required": "Access token required",
-    "unauthorized_access": "You are not authorized to access this resource."
+    "unauthorized_access": "You are not authorized to access this resource.",
+    "approved_successfully": "Loan Approved Successfully"
 }

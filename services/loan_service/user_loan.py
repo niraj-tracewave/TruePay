@@ -11,13 +11,13 @@ from common.cache_string import gettext
 from common.common_services.aws_services import AWSClient
 from common.common_services.email_service import EmailService
 from common.email_html_utils import build_loan_email_bodies
-from common.enums import DocumentType, IncomeProofType, LoanType, UploadFileType
+from common.enums import DocumentType, IncomeProofType, LoanType, UploadFileType, LoanStatus
 from common.utils import format_loan_documents, validate_file_type, calculate_emi_schedule
 from db_domains import Base
 from db_domains.db import DBSession
 from db_domains.db_interface import DBInterface
-from models.loan import LoanDocument, LoanApplicant
-from schemas.loan_schemas import LoanForm, LoanApplicantResponseSchema
+from models.loan import LoanDocument, LoanApplicant, LoanApprovalDetail
+from schemas.loan_schemas import LoanForm, LoanApplicantResponseSchema, UserApprovedLoanForm
 
 
 class UserLoanService:
@@ -35,7 +35,7 @@ class UserLoanService:
     def add_loan_application(
             self, user_id: str, loan_application_form: LoanForm, background_tasks: BackgroundTasks,
             is_created_by_admin: bool
-            ):
+    ):
         try:
             app_logger.info(f"User {user_id} initiated loan application.")
 
@@ -186,6 +186,9 @@ class UserLoanService:
                     "approved_loan": loan.approved_loan,
                     "effective_interest_rate": self.get_effective_rate(loan),
                     "credit_score": loan.credit_score,
+                    "desired_loan": loan.desired_loan,
+                    "annual_income": loan.annual_income,
+                    "purpose_of_loan": loan.purpose_of_loan,
                     "documents": [
                         {
                             "id": doc.id,
@@ -310,6 +313,64 @@ class UserLoanService:
 
         except Exception as e:
             app_logger.error(f"Error uploading files to S3: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "message": gettext("something_went_wrong"),
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": {}
+            }
+
+    def add_user_approved_loan(self, user_id: int, loan_application_form: UserApprovedLoanForm):
+        approval_interface = DBInterface(LoanApprovalDetail)
+        applicant_interface = DBInterface(LoanApplicant)
+
+        try:
+            app_logger.info(
+                f"[add_user_approved_loan] Starting approval process for applicant_id: {loan_application_form.applicant_id}"
+            )
+
+            # Step 1: Create LoanApprovalDetail
+            approval_data = {
+                "applicant_id": loan_application_form.applicant_id,
+                "approved_interest_rate": loan_application_form.approved_interest_rate,
+                "final_interest_rate": loan_application_form.final_interest_rate,
+                "custom_interest_rate": loan_application_form.custom_interest_rate if loan_application_form.custom_interest_rate != 0 else None,
+                "approved_processing_fee": loan_application_form.approved_processing_fee,
+                "processing_fee_amount": loan_application_form.processing_fee_amount,
+                "custom_processing_fee": loan_application_form.custom_processing_fee if loan_application_form.custom_processing_fee != 0 else None,
+                "approved_tenure_months": loan_application_form.approved_tenure_months,
+                "final_tenure_months": loan_application_form.final_tenure_months,
+                "user_accepted_amount": loan_application_form.user_accepted_amount,
+                "approved_loan_amount": loan_application_form.approved_loan_amount,
+                "created_by": user_id,
+                "modified_by": user_id
+            }
+
+            approval_instance = approval_interface.create(approval_data)
+            app_logger.info(f"[add_user_approved_loan] LoanApprovalDetail created: ID {approval_instance.id}")
+
+            # Step 2: Update LoanApplicant status
+            updated_applicant = applicant_interface.update(
+                _id=str(loan_application_form.applicant_id),
+                data={
+                    "status": LoanStatus.USER_ACCEPTED,
+                    "modified_by": user_id
+                }
+            )
+            app_logger.info(f"[add_user_approved_loan] LoanApplicant status updated to USER_ACCEPTED")
+
+            return {
+                "success": True,
+                "message": gettext("approved_successfully"),
+                "status_code": status.HTTP_200_OK,
+                "data": {
+                    "loan_approval_detail": approval_instance,
+                    "loan_applicant": updated_applicant
+                }
+            }
+
+        except Exception as e:
+            app_logger.error(f"[add_user_approved_loan] Failed to approve loan: {str(e)}")
             return {
                 "success": False,
                 "message": gettext("something_went_wrong"),

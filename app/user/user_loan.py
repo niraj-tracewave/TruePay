@@ -6,7 +6,7 @@ from starlette import status
 from common.enums import UploadFileType
 from common.response import ApiResponse
 from models.loan import LoanApplicant
-from schemas.loan_schemas import LoanForm
+from schemas.loan_schemas import LoanForm, UserApprovedLoanForm
 from services.loan_service.user_loan import UserLoanService
 
 router = APIRouter(prefix="/loan", tags=["User Panel Loan API's"])
@@ -59,6 +59,18 @@ def get_loan_application_details(request: Request, loan_application_id: str):
 async def upload_file(request: Request, file_type: UploadFileType = Form(...), files: List[UploadFile] = File(...)):
     user = getattr(request.state, "user", None)
     response = await loan_service.upload_files_to_s3(file_type=file_type, files=files)
+
+    return ApiResponse.create_response(
+        success=response.get("success"),
+        message=response.get("message"),
+        status_code=response.get("status_code", status.HTTP_200_OK),
+        data=response.get("data")
+    )
+
+@router.post("/add-user-approved-loan", summary="Add User Approved Loan")
+def add_user_approved_loan(request: Request, form_data: UserApprovedLoanForm):
+    user_state = getattr(request.state, "user", None)
+    response = loan_service.add_user_approved_loan(user_id=user_state.get("id"), loan_application_form=form_data)
 
     return ApiResponse.create_response(
         success=response.get("success"),
