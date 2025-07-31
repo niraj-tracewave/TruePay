@@ -2,7 +2,7 @@ import operator
 from datetime import datetime
 from typing import Any, Optional, Sequence, Dict, List
 
-from sqlalchemy import and_, or_, not_, desc, asc
+from sqlalchemy import and_, or_, not_, desc, asc, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload
 
@@ -292,5 +292,16 @@ class DBInterface:
         except Exception as e:
             session.rollback()
             raise Exception(f"Error performing soft delete in {self.db_class.__name__}: {str(e)}")
+        finally:
+            session.close()
+
+    def count_all_by_fields(self, filters: list) -> int:
+        session = DBSession()
+        try:
+            count = session.query(func.count()).select_from(self.db_class).filter(*filters).scalar()
+            return count or 0
+        except Exception as e:
+            session.rollback()
+            raise Exception(f"Error counting records by fields in {self.db_class.__name__}: {str(e)}")
         finally:
             session.close()

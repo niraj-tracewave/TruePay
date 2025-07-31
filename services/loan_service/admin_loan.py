@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
 from starlette import status
@@ -36,7 +36,7 @@ class AdminLoanService(UserLoanService):
             if start_date and end_date:
                 try:
                     start = datetime.strptime(start_date, date_format)
-                    end = datetime.strptime(end_date, date_format)
+                    end = datetime.strptime(end_date, date_format) + timedelta(days=1) - timedelta(seconds=1)
 
                     filter_def["AND"].append({"field": "created_at", "op": ">=", "value": start})
                     filter_def["AND"].append({"field": "created_at", "op": "<=", "value": end})

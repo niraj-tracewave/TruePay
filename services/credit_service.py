@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 
 from starlette import status
@@ -101,6 +102,9 @@ class CreditScoreService:
                 update_fields["max_score"] = form_data.max_score
             if form_data.rate_percentage is not None:
                 update_fields["rate_percentage"] = form_data.rate_percentage
+            if form_data.is_deleted is not None:
+                update_fields["is_deleted"] = form_data.is_deleted
+                update_fields["deleted_at"] = datetime.now()
 
             if update_fields:
                 update_fields["modified_by"] = user_id
@@ -132,7 +136,7 @@ class CreditScoreService:
 
     def get_all_credit_range_rates(self, user_id: int) -> dict:
         try:
-            all_entries = self.db_interface.read_all()
+            all_entries = self.db_interface.read_by_fields(fields=[CreditScoreRangeRate.is_deleted == False])
             result = [
                 {
                     "id": entry.id,
@@ -277,6 +281,9 @@ class CreditScoreService:
                 update_fields["min_fee_percent"] = form_data.min_fee_percent
             if form_data.max_fee_percent is not None:
                 update_fields["max_fee_percent"] = form_data.max_fee_percent
+            if form_data.is_deleted is not None:
+                update_fields["is_deleted"] = form_data.is_deleted
+                update_fields["deleted_at"] = datetime.now()
 
             if update_fields:
                 update_fields["modified_by"] = user_id
@@ -307,7 +314,7 @@ class CreditScoreService:
     def get_all_processing_fees(self, user_id: int) -> dict:
         try:
             processing_fee_db_interface = DBInterface(ProcessingFee)
-            all_entries = processing_fee_db_interface.read_all()
+            all_entries = processing_fee_db_interface.read_by_fields(fields=[ProcessingFee.is_deleted == False])
             if not all_entries:
                 return {
                     "success": True,
