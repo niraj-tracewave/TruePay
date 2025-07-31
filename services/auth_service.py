@@ -446,6 +446,9 @@ class AdminAuthService(UserAuthService):
                     {"field": "is_deleted", "op": "==", "value": False}
                 ]
             }
+            total_users = self.db_interface.count_all_by_fields(
+                filters=[User.is_deleted == False, User.role != UserRole.admin]
+                )
 
             # 🔍 Add status filter
             if status_filter is not None:
@@ -499,7 +502,7 @@ class AdminAuthService(UserAuthService):
                 "status_code": status.HTTP_200_OK if user_list else status.HTTP_404_NOT_FOUND,
                 "data": {
                     "user": user_list,
-                    "total_count": len(user_list) or 0,
+                    "total_count": total_users,
                 }
             }
 

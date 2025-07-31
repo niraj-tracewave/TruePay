@@ -91,6 +91,13 @@ class LoanApplicantResponseSchema(BaseModel):
     loan_type: str
     approved_loan: Optional[float]
     credit_score: Optional[str]
+    credit_score_range_rate_id: Optional[int] = 0
+    credit_score_range_rate_percentage: Optional[float] = 0.0
+    custom_rate_percentage: Optional[float] = 0.0
+    processing_fee_id: Optional[int] = 0
+    processing_fee: Optional[float] = 0.0
+    custom_processing_fee: Optional[float] = 0.0
+    tenure_months: Optional[int] = 0
 
     model_config = {
         "from_attributes": True
