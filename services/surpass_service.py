@@ -434,3 +434,41 @@ class SurpassService:
                 "status_code": status.HTTP_400_BAD_REQUEST,
                 "data": {}
             }
+
+    async def download_aadhar_data(self, client_id: str, user_id: int):
+        try:
+            endpoint = f"digilocker/download-aadhaar/{client_id}"
+            app_logger.info(f"User {user_id} is downloading Aadhaar using client_id={client_id}")
+
+            response_data, status_code, request_error = await self.surpass_request_obj.make_request(
+                endpoint=endpoint,
+                method="GET"
+            )
+
+            if request_error:
+                app_logger.error(f"Aadhaar download failed for client_id={client_id}, error: {request_error}")
+                return {
+                    "success": False,
+                    "message": request_error,
+                    "status_code": status_code,
+                    "data": {}
+                }
+
+            aadhaar_data = response_data.get("data", {})
+            app_logger.info(f"Aadhaar data fetched for user_id={user_id}: {aadhaar_data}")
+
+            return {
+                "success": True,
+                "message": "Aadhaar details fetched successfully",
+                "status_code": status.HTTP_200_OK,
+                "data": aadhaar_data
+            }
+
+        except Exception as e:
+            app_logger.error(f"Exception during Aadhaar data download for client_id={client_id}: {str(e)}")
+            return {
+                "success": False,
+                "message": "Error downloading Aadhaar data",
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": {}
+            }

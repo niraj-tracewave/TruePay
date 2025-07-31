@@ -66,3 +66,15 @@ async def verify_aadhar_card(request: Request, aadhar_details: AadharCardDetails
         status_code=response.get("status_code"),
         data=response.get("data")
     )
+
+
+@router.post("/get-aadhar-card-details/{client_id}", summary="Get Aadhar Card Details.")
+async def get_aadhar_card_details(request: Request, client_id: str):
+    user_state = getattr(request.state, "user", None)
+    response = await surpass_service.download_aadhar_data(user_id=user_state.get("id"), client_id=client_id)
+    return ApiResponse.create_response(
+        success=response.get("success"),
+        message=response.get("message"),
+        status_code=response.get("status_code"),
+        data=response.get("data")
+    )
