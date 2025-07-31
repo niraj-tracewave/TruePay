@@ -1,7 +1,7 @@
 from starlette import status
 
 from app_logging import app_logger
-from common.enums import LoanStatus
+from common.enums import LoanStatus, UserRole
 from config import app_config
 from db_domains import Base
 from db_domains.db_interface import DBInterface
@@ -56,7 +56,7 @@ class DashboardService:
 
             # Total Users
             user_interface = DBInterface(User)
-            user_filter = [User.is_deleted == False]
+            user_filter = [User.is_deleted == False, User.role == UserRole.user]
             total_users = user_interface.count_all_by_fields(user_filter)
             app_logger.info(f"Total users count fetched: {total_users}")
 
