@@ -102,14 +102,14 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
             app_logger.info(f"[AuthMiddleware] Token verified | user_id: {user_id}")
 
-            is_admin_route = request_path.startswith(f"{API_PREFIX}/admin")
-            if is_admin_route and user_role != UserRole.admin:
-                app_logger.warning("[AuthMiddleware] Non-admin tried accessing admin route")
-                return ApiResponse.create_response(
-                    success=False,
-                    message=gettext("unauthorized_access"),
-                    status_code=status.HTTP_403_FORBIDDEN
-                )
+            # is_admin_route = request_path.startswith(f"{API_PREFIX}/admin")
+            # if is_admin_route and user_role != UserRole.admin:
+            #     app_logger.warning("[AuthMiddleware] Non-admin tried accessing admin route")
+            #     return ApiResponse.create_response(
+            #         success=False,
+            #         message=gettext("unauthorized_access"),
+            #         status_code=status.HTTP_403_FORBIDDEN
+            #     )
 
             request.state.user = payload
 
