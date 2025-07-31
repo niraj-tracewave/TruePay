@@ -35,8 +35,8 @@ class CreditScoreService:
 
             if existing_entry:
                 return {
-                    "success": True,
-                    "message": "Credit score and interest rate added successfully",
+                    "success": False,
+                    "message": "Interest Rate already exists for this Credit Score range and Loan Type",
                     "status_code": status.HTTP_200_OK,
                     "data": {}
                 }
@@ -224,7 +224,7 @@ class CreditScoreService:
             if existing_entry:
                 return {
                     "success": False,
-                    "message": "Processing fee already exists for this range",
+                    "message": "Processing fee already exists for this Credit Score range",
                     "status_code": status.HTTP_400_BAD_REQUEST,
                     "data": {}
                 }
