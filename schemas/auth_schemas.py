@@ -96,8 +96,8 @@ class AddUserRequest(BaseModel):
 
 class UserResponseSchema(BaseModel):
     id: int
-    name: str
-    email: Optional[str]
+    name: Optional[str] = None
+    email: Optional[str] = None
     phone: str
     profile_image: Optional[str] = None
     pan_number: Optional[str] = None
