@@ -26,6 +26,8 @@ class LoanForm(BaseModel):
     pan_file: Optional[str] = None
     aadhaar_file: Optional[str] = None
     credit_score: Optional[str] = None
+    pan_verified: Optional[bool] = False
+    aadhaar_verified: Optional[bool] = False
 
     proof_type: IncomeProofType
     document_type: DocumentType

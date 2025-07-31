@@ -10,8 +10,8 @@ from app_logging import app_logger
 from common.cache_string import gettext
 from common.common_services.aws_services import AWSClient
 from common.common_services.email_service import EmailService
-from common.enums import DocumentType, IncomeProofType, LoanType, UploadFileType
 from common.email_html_utils import build_loan_email_bodies
+from common.enums import DocumentType, IncomeProofType, LoanType, UploadFileType
 from common.utils import format_loan_documents, validate_file_type, calculate_emi_schedule
 from db_domains import Base
 from db_domains.db import DBSession
@@ -32,7 +32,10 @@ class UserLoanService:
             return loan.credit_score_range_rate.rate_percentage
         return 0.0
 
-    def add_loan_application(self, user_id: str, loan_application_form: LoanForm, background_tasks: BackgroundTasks, is_created_by_admin: bool):
+    def add_loan_application(
+            self, user_id: str, loan_application_form: LoanForm, background_tasks: BackgroundTasks,
+            is_created_by_admin: bool
+            ):
         try:
             app_logger.info(f"User {user_id} initiated loan application.")
 
@@ -63,7 +66,7 @@ class UserLoanService:
 
             # Prepare all documents
             all_documents = []
-            doc_creator = lambda doc_type, number, file, proof_type=None: {
+            doc_creator = lambda doc_type, number, file, proof_type=None, is_verified=False: {
                 "applicant_id": applicant_id,
                 "document_type": doc_type,
                 "document_number": number or "",
@@ -79,7 +82,8 @@ class UserLoanService:
                     doc_creator(
                         DocumentType.PAN.value,
                         loan_application_form.pan_number,
-                        loan_application_form.pan_file
+                        loan_application_form.pan_file,
+                        is_verified=loan_application_form.pan_verified
                     )
                 )
                 app_logger.info("PAN document prepared for upload.")
@@ -90,7 +94,8 @@ class UserLoanService:
                     doc_creator(
                         DocumentType.AADHAR.value,
                         loan_application_form.aadhaar_number,
-                        loan_application_form.aadhaar_file
+                        loan_application_form.aadhaar_file,
+                        is_verified=loan_application_form.aadhaar_verified
                     )
                 )
                 app_logger.info("Aadhaar document prepared for upload.")
@@ -124,12 +129,12 @@ class UserLoanService:
             loan_document_interface = DBInterface(LoanDocument)
             document_instances = loan_document_interface.bulk_create(data_list=all_documents)
             app_logger.info(f"Documents uploaded successfully for applicant ID {applicant_id}.")
-            
-            #NOTE: Send Email Feature 
+
+            # NOTE: Send Email Feature
             try:
                 # Prepare email
                 subject = "New Loan Application Submitted"
-                recipient =  os.environ.get("RECIPIENT_ADMIN_EMAIL", "") 
+                recipient = os.environ.get("RECIPIENT_ADMIN_EMAIL", "")
                 email_service_obj = EmailService()
                 plain_body, html_body = build_loan_email_bodies(loan_application_form, applicant_obj, applicant_id)
                 if os.environ.get("IS_PROD").lower() == "true" and is_created_by_admin == False:

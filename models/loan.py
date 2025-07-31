@@ -101,6 +101,7 @@ class LoanDocument(CreateUpdateTime, CreateByUpdateBy):
         Enum(DocumentStatus), default=DocumentStatus.PENDING, server_default=DocumentStatus.PENDING.value,
         nullable=False
     )
+    is_verified = Column(Boolean, default=False)
 
     applicant = relationship("LoanApplicant", back_populates="documents")
 
