@@ -37,7 +37,7 @@ class CreditScoreService:
                 return {
                     "success": False,
                     "message": "Interest Rate already exists for this Credit Score range and Loan Type",
-                    "status_code": status.HTTP_200_OK,
+                    "status_code": status.HTTP_400_BAD_REQUEST,
                     "data": {}
                 }
 
