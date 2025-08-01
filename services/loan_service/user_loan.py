@@ -32,6 +32,13 @@ class UserLoanService:
             return loan.credit_score_range_rate.rate_percentage
         return 0.0
 
+    def get_effective_processing_fee(self, loan: LoanApplicant) -> float:
+        if loan.custom_processing_fee is not None:
+            return loan.custom_processing_fee
+        if loan.processing_fee_id:
+            return loan.processing_fee
+        return 0.0
+
     def add_loan_application(
             self, user_id: str, loan_application_form: LoanForm, background_tasks: BackgroundTasks,
             is_created_by_admin: bool
@@ -255,12 +262,14 @@ class UserLoanService:
                 formatted_documents = format_loan_documents(loan_with_docs.documents) if loan_with_docs else []
                 loan_response["documents"] = formatted_documents
 
+                effective_processing_fee = self.get_effective_processing_fee(loan_with_docs)
+
                 if loan_with_docs.approved_loan and loan_with_docs.status == "APPROVED":
                     emi_result = calculate_emi_schedule(
                         loan_amount=loan_with_docs.approved_loan,
-                        tenure_months=12,
+                        tenure_months=loan_with_docs.tenure_months,
                         annual_interest_rate=loan_response["effective_interest_rate"],
-                        processing_fee=2.0,
+                        processing_fee=effective_processing_fee,
                         is_fee_percentage=True
                     )
 
