@@ -251,6 +251,10 @@ class UserLoanService:
                         "data": {}
                     }
                 loan_response = LoanApplicantResponseSchema.model_validate(loan_with_docs).model_dump()
+                loan_response["min_loan_amount"]=100
+                loan_response["min_tenure_months"]=12
+                loan_response["max_tenure_months"]=loan_with_docs.tenure_months
+                loan_response["tenure_months_steps"]=6
                 loan_response["effective_interest_rate"] = self.get_effective_rate(loan_with_docs)
                 formatted_documents = format_loan_documents(loan_with_docs.documents) if loan_with_docs else []
                 loan_response["documents"] = formatted_documents

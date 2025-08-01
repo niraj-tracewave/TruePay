@@ -38,6 +38,7 @@ def format_user_response(user: User, documents: Optional[list[UserDocument]] = N
             "id": user_cibil_data.id,
             "name": user_cibil_data.name,
             "credit_score": user_cibil_data.credit_score,
+            "pan_number": user_cibil_data.pan_number if user_cibil_data.pan_number else "",
             "refresh_date": user_cibil_data.report_refresh_date,
             "next_eligible_date": user_cibil_data.next_eligible_date,
             "client_id": user_cibil_data.client_id,
