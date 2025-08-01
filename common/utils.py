@@ -235,7 +235,7 @@ def calculate_emi_schedule(
             "status_code": status.HTTP_200_OK,
             "data": {
                 "loan_amount": round(float(ceil(loan_amount)), 2),
-                "processing_fee": round(float(ceil(processing_fee)), 2),
+                "processing_fee": float(processing_fee),
                 "total_principal": round(float(ceil(total_principal)), 2),
                 "monthly_emi": round(float(ceil(emi)), 2),
                 "schedule": schedule,
