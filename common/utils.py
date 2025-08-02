@@ -42,6 +42,7 @@ def format_user_response(user: User, documents: Optional[list[UserDocument]] = N
             "refresh_date": user_cibil_data.report_refresh_date,
             "next_eligible_date": user_cibil_data.next_eligible_date,
             "client_id": user_cibil_data.client_id,
+            "gender": user_cibil_data.gender.value,
         }
 
     return {
