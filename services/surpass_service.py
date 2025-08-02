@@ -48,7 +48,8 @@ class SurpassService:
                 "credit_score": data.get("credit_score"),
                 "credit_report": data.get("credit_report", {}),
                 "report_refresh_date": current_date,
-                "next_eligible_date": current_date + timedelta(days=30)
+                "next_eligible_date": current_date + timedelta(days=30),
+                "gender": "male" if data.get("gender") == "male" else "female" if data.get("gender") == "female" else "other",
             }
 
             if existing_id:
@@ -64,6 +65,7 @@ class SurpassService:
                 "name": data.get("name"),
                 "refresh_date": report_data.get("report_refresh_date"),
                 "next_eligible_date": report_data.get("next_eligible_date"),
+                "gender": report_data.get("gender"),
             }, request_status_code, None
 
         # Logic conditions
@@ -81,6 +83,7 @@ class SurpassService:
                 "client_id": existing_report.client_id,
                 "refresh_date": existing_report.report_refresh_date,
                 "next_eligible_date": existing_report.next_eligible_date,
+                "gender": existing_report.gender
             }
 
             status_code = status.HTTP_200_OK
