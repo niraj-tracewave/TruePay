@@ -175,7 +175,7 @@ class UserLoanService:
             with DBSession() as session:
                 loan_with_docs = (
                     session.query(LoanApplicant)
-                    .options(selectinload(LoanApplicant.documents), selectinload(LoanApplicant.credit_score_range_rate))
+                    .options(selectinload(LoanApplicant.documents),  selectinload(LoanApplicant.bank_accounts), selectinload(LoanApplicant.credit_score_range_rate))
                     .filter(LoanApplicant.created_by == user_id, LoanApplicant.is_deleted == False)
                     .all()
                 )
@@ -204,7 +204,18 @@ class UserLoanService:
                             "document_number": doc.document_number,
                             "document_file": doc.document_file,
                         } for doc in loan.documents
-                    ]
+                    ],
+                    "bank_accounts": [
+                        {
+                            "id": bank_account.id,
+                            "applicant_id": bank_account.applicant_id,
+                            "account_number": bank_account.account_number,
+                            "account_holder_name": bank_account.account_holder_name,
+                            "bank_name": bank_account.bank_name,
+                            "ifsc_code": bank_account.ifsc_code
+                    
+                        }
+                    for bank_account in loan.bank_accounts ]
                 }
                 loan_list.append(loan_data)
             return {
@@ -243,6 +254,7 @@ class UserLoanService:
                     session.query(LoanApplicant)
                     .options(
                         selectinload(LoanApplicant.documents),
+                        selectinload(LoanApplicant.bank_accounts),
                         selectinload(LoanApplicant.credit_score_range_rate),
                         with_loader_criteria(LoanDocument, LoanDocument.is_deleted == False)
                     )
@@ -264,6 +276,16 @@ class UserLoanService:
                 loan_response["tenure_months_steps"]=6
                 loan_response["effective_interest_rate"] = self.get_effective_rate(loan_with_docs)
                 formatted_documents = format_loan_documents(loan_with_docs.documents) if loan_with_docs else []
+                loan_response["bank_accounts"] = [
+                        {
+                            "id": bank_account.id,
+                            "applicant_id": bank_account.applicant_id,
+                            "account_number": bank_account.account_number,
+                            "account_holder_name": bank_account.account_holder_name,
+                            "bank_name": bank_account.bank_name,
+                            "ifsc_code": bank_account.ifsc_code
+                        }
+                    for bank_account in loan_with_docs.bank_accounts ]
                 loan_response["documents"] = formatted_documents
 
                 effective_processing_fee = self.get_effective_processing_fee(loan_with_docs)
