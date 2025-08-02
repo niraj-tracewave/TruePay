@@ -5,7 +5,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from common.enums import UserRole, DocumentType
+from common.enums import UserRole, DocumentType, GenderEnum
 from db_domains import CreateUpdateTime
 from models.loan import BankAccount
 
@@ -23,6 +23,7 @@ class User(CreateUpdateTime):
     role = Column(Enum(UserRole), default=UserRole.user, nullable=False, index=True)
     is_active = Column(Boolean, default=True, index=True)
     profile_image = Column(String(255), nullable=True)
+    gender = Column(Enum(GenderEnum), nullable=False, server_default="male")
 
     documents = relationship(
         "UserDocument",

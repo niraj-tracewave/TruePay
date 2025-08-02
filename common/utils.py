@@ -54,6 +54,7 @@ def format_user_response(user: User, documents: Optional[list[UserDocument]] = N
         "is_active": user.is_active,
         "created_at": user.created_at.isoformat() if user.created_at else "",
         "profile_image": user.profile_image or "",
+        "gender": user.gender.value,
 
         "pan_number": pan_doc.document_number if pan_doc else "",
         "pan_document": pan_doc.document_file if pan_doc else "",

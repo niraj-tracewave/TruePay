@@ -206,7 +206,7 @@ class UserAuthService:
             # Prepare user data
             user_data = form_data.model_dump(exclude_unset=True)
             user_data = {k: v for k, v in user_data.items() if
-                         k in ["name", "email", "phone", "address", "profile_image"]}
+                         k in ["name", "email", "phone", "address", "profile_image", "gender"]}
 
             # Update user
             user_updated_obj = self.db_interface.update(_id=user_id, data=user_data)
@@ -632,7 +632,7 @@ class AdminAuthService(UserAuthService):
             user_data = {
                 k: v for k, v in user_data.items()
                 if
-                k in ["name", "email", "phone", "address", "profile_image", "is_deleted", "is_active"] and v is not None
+                k in ["name", "email", "phone", "address", "profile_image", "is_deleted", "is_active", "gender"] and v is not None
             }
 
             # Update user record
