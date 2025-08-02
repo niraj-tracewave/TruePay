@@ -31,6 +31,7 @@ class UpdateProfileRequest(BaseModel):
     aadhaar_number: Optional[constr(min_length=12, max_length=12)] = None
     pan_file: Optional[str] = None
     aadhaar_file: Optional[str] = None
+    gender: str
 
     @model_validator(mode="after")
     def check_files_required_if_numbers_provided(cls, values):
@@ -77,6 +78,7 @@ class AddUserRequest(BaseModel):
     aadhaar_number: constr(min_length=12, max_length=12)
     pan_file: Optional[str] = None
     aadhaar_file: Optional[str] = None
+    gender: str
 
     @model_validator(mode="after")
     def check_files_required_if_numbers_provided(cls, values):

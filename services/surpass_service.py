@@ -310,6 +310,18 @@ class SurpassService:
                 "ifsc_details": True
             }
 
+            bank_account_interface = DBInterface(BankAccount)
+            bank_account = bank_account_interface.read_by_fields(fields=[BankAccount.applicant_id == bank_detail.applicant_id, BankAccount.account_number == bank_detail.id_number, BankAccount.ifsc_code == bank_detail.ifsc, BankAccount.is_deleted == False])
+
+            if bank_account:
+                return {
+                    "success": False,
+                    "message": "Bank detail already verified for this loan.",
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "data": {}
+                }
+
+
             app_logger.debug(f"[bank_verifications] Sending payload to surpass API: {bank_verification_payload_data}")
 
             response_data, request_status_code, request_error = await self.surpass_request_obj.make_request(
@@ -338,8 +350,6 @@ class SurpassService:
 
             data = response_data.get("data", {})
 
-            bank_account_interface = DBInterface(BankAccount)
-
             bank_data = {
                 "user_id": bank_detail.user_id,
                 "applicant_id": bank_detail.applicant_id,
@@ -364,7 +374,6 @@ class SurpassService:
             bank_account_response = bank_account_interface.create(data=bank_data)
 
             app_logger.info(f"[bank_verifications] Bank details saved successfully for user_id={user_id}")
-
             return {
                 "success": True,
                 "message": "Bank details validated successfully",

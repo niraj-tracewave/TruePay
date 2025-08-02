@@ -19,7 +19,8 @@ class SurpassRequestService:
         response = None
 
         try:
-            async with httpx.AsyncClient() as client:
+            timeout = httpx.Timeout(30.0)
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 if method.upper() == "GET":
                     response = await client.get(url, params=params, headers=self.headers)
                 elif method.upper() == "POST":

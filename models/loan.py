@@ -166,7 +166,7 @@ class BankAccount(CreateUpdateTime, CreateByUpdateBy):
     applicant = relationship("LoanApplicant", back_populates="bank_accounts")
     user = relationship("User", back_populates="bank_accounts", foreign_keys=[user_id])
 
-    __table_args__ = (
-        UniqueConstraint("account_number", "ifsc_code", name="uq_account_number_ifsc"),
-        UniqueConstraint("applicant_id", "type", name="uq_loan_type"),
-    )
+    # __table_args__ = (
+    #     UniqueConstraint("account_number", "ifsc_code", name="uq_account_number_ifsc"),
+    #     UniqueConstraint("applicant_id", "type", name="uq_loan_type"),
+    # )
