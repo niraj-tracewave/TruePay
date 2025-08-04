@@ -31,6 +31,8 @@ class Setting(BaseSettings):
     SMTP_PASSWORD: str
     IS_PROD: str
     RECIPIENT_ADMIN_EMAIL: str
+    RAZORPAY_KEY_ID: str
+    RAZORPAY_SECRET: str
     GST_CHARGE: str
 
     # Default Log type
@@ -93,6 +95,8 @@ class Config(object):
     SMTP_PASSWORD= app_settings.SMTP_PASSWORD
     IS_PROD = app_settings.IS_PROD
     RECIPIENT_ADMIN_EMAIL = app_settings.RECIPIENT_ADMIN_EMAIL
+    RAZORPAY_KEY_ID= app_settings.RAZORPAY_KEY_ID
+    RAZORPAY_SECRET=app_settings.RAZORPAY_SECRET
     GST_CHARGE = app_settings.GST_CHARGE
 
 
