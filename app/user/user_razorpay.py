@@ -1,23 +1,19 @@
 from fastapi import APIRouter, Depends
 from services.dependencies import get_razorpay_service
 from services.razorpay_service import RazorpayService
-from datetime import datetime, timedelta
-
+from schemas.razorpay_schema import CreatePlanSchema, CreateSubscriptionSchema
 router = APIRouter(prefix="/razorpay", tags=["Surpass API's"])
 
 
 @router.post("/create-emi-plan")
-def create_emi_plan(service: RazorpayService = Depends(get_razorpay_service)):
-    plan = service.create_plan(
-    name=f"Loan EMI Plan ₹{55000}",
-    amount=int(5500 * 100),  # Convert to paise
-    interval=10,
-    period="monthly"
-)
+def create_emi_plan(payload: CreatePlanSchema, service: RazorpayService = Depends(get_razorpay_service)):
+    plan_data = payload.dict(exclude_none=True)  # exclude None values
+    plan = service.create_plan(plan_data)
     return {"plan": plan}
 
-@router.post("/create-subscription/{plan_id}")
-def create_subscription(plan_id: str, service: RazorpayService = Depends(get_razorpay_service)):
-    start_at = int((datetime.now() + timedelta(days=1)).timestamp())
-    subscription = service.create_subscription(plan_id=plan_id, total_count=12, start_at=start_at)
+
+@router.post("/create-subscription")
+def create_subscription(payload: CreateSubscriptionSchema, service: RazorpayService = Depends(get_razorpay_service)):
+    subscription_data = payload.dict(exclude_none=True)
+    subscription = service.create_subscription(subscription_data)
     return {"subscription": subscription}

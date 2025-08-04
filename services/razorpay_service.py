@@ -1,6 +1,7 @@
 import razorpay
 from typing import Optional, Dict
 
+
 class RazorpayService:
     def __init__(self, key_id: str, key_secret: str):
         self.client = razorpay.Client(auth=(key_id, key_secret))
@@ -15,34 +16,54 @@ class RazorpayService:
             "contact": contact
         })
 
-    def create_plan(self, name: str, amount: int, interval: int = 1, period: str = "monthly") -> Dict:
+    def create_plan(self, plan_data: Dict) -> Dict:
         """
-        Create a subscription plan for EMI
-        amount in paise
-        """
-        return self.client.plan.create({
-            "period": period,
-            "interval": interval,
-            "item": {
-                "name": name,
-                "amount": amount,
-                "currency": "INR"
+            Create a subscription plan for EMI
+            plan_data should follow Razorpay API structure:
+            {
+                "period": "weekly",
+                "interval": 1,
+                "item": {
+                    "name": "Test plan",
+                    "amount": 69900,
+                    "currency": "INR",
+                    "description": "Optional description"
+                },
+                "notes": {
+                    "notes_key_1": "Optional note 1",
+                    "notes_key_2": "Optional note 2"
+                }
             }
-        })
+        """
+        return self.client.plan.create(plan_data)
 
-    def create_subscription(self, plan_id: str, total_count: int, customer_notify: int = 1, start_at: Optional[int] = None) -> Dict:
+    def create_subscription(self, subscription_data: Dict) -> Dict:
         """
-        Create a subscription for a plan
-        start_at: Unix timestamp (optional)
+            Create a subscription for a plan using full payload structure:
+            {
+            "plan_id":"{plan_id}",
+            "total_count":6,
+            "quantity":1,
+            "start_at":1735689600,
+            "expire_by":1893456000,
+            "customer_notify":1,
+            "addons":[
+                {
+                "item":{
+                    "name":"Delivery charges",
+                    "amount":30000,
+                    "currency":"INR"
+                }
+                }
+            ],
+            "offer_id":"{offer_id}",
+            "notes":{
+                "notes_key_1":"Tea, Earl Grey, Hot",
+                "notes_key_2":"Tea, Earl Grey… decaf."
+            }
+            }
         """
-        data = {
-            "plan_id": plan_id,
-            "customer_notify": customer_notify,
-            "total_count": total_count
-        }
-        if start_at:
-            data["start_at"] = start_at
-        return self.client.subscription.create(data)
+        return self.client.subscription.create(subscription_data)
 
     def fetch_subscription(self, subscription_id: str) -> Dict:
         """
@@ -61,7 +82,8 @@ class RazorpayService:
         Verify Razorpay webhook signature
         """
         try:
-            self.client.utility.verify_webhook_signature(payload_body, signature, secret)
+            self.client.utility.verify_webhook_signature(
+                payload_body, signature, secret)
             return True
         except razorpay.errors.SignatureVerificationError:
             return False
