@@ -303,6 +303,31 @@ class UserLoanService:
                         loan_response["emi_info"] = emi_result["data"]
                     else:
                         loan_response["emi_info"] = {"error": emi_result["message"]}
+                elif loan_with_docs.approved_loan and loan_with_docs.status == "USER_ACCEPTED":
+                    user_filter = [
+                        LoanApprovalDetail.applicant_id == loan_application_id
+                    ]
+                    loan_approval_detail = (
+                        session.query(LoanApprovalDetail)
+                        .join(LoanApprovalDetail.applicant)
+                        .filter(*user_filter)
+                        .first()
+                    )
+
+                    if loan_approval_detail:
+                        emi_result = calculate_emi_schedule(
+                            loan_amount=loan_approval_detail.user_accepted_amount,
+                            tenure_months=loan_approval_detail.approved_tenure_months,
+                            annual_interest_rate=loan_approval_detail.approved_interest_rate,
+                            processing_fee=effective_processing_fee,
+                            is_fee_percentage=True
+                        )
+                        if emi_result.get("success"):
+                            loan_response["emi_info"] = emi_result["data"]
+                        else:
+                            loan_response["emi_info"] = {"error": emi_result["message"]}
+                    else:
+                        loan_response["emi_info"] = {"error": "Approved loan not set"}
                 else:
                     loan_response["emi_info"] = {"error": "Approved loan not set"}
             return {
