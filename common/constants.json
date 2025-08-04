@@ -31,5 +31,6 @@
     "invalid_password": "Invalid Password",
     "access_token_required": "Access token required",
     "unauthorized_access": "You are not authorized to access this resource.",
-    "approved_successfully": "Loan Approved Successfully"
+    "approved_successfully": "Loan Approved Successfully",
+    "instant_cash_fetched_successfully": "EMI for Instant cash calculate successfully."
 }

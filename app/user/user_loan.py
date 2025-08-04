@@ -6,7 +6,7 @@ from starlette import status
 from common.enums import UploadFileType
 from common.response import ApiResponse
 from models.loan import LoanApplicant
-from schemas.loan_schemas import LoanForm, UserApprovedLoanForm
+from schemas.loan_schemas import LoanForm, UserApprovedLoanForm, InstantCashForm
 from services.loan_service.user_loan import UserLoanService
 
 router = APIRouter(prefix="/loan", tags=["User Panel Loan API's"])
@@ -72,6 +72,18 @@ def add_user_approved_loan(request: Request, form_data: UserApprovedLoanForm):
     user_state = getattr(request.state, "user", None)
     response = loan_service.add_user_approved_loan(user_id=user_state.get("id"), loan_application_form=form_data)
 
+    return ApiResponse.create_response(
+        success=response.get("success"),
+        message=response.get("message"),
+        status_code=response.get("status_code", status.HTTP_200_OK),
+        data=response.get("data")
+    )
+
+@router.post("/calculate-emi", summary="Calculate EMI for Instant Loan")
+def calculate_instant_cash(request: Request, form_data: InstantCashForm):
+    user_state = getattr(request.state, "user", None)
+
+    response = loan_service.calculate_emi_for_instant_cash(user_id=user_state.get("id"), loan_application_form=form_data)
     return ApiResponse.create_response(
         success=response.get("success"),
         message=response.get("message"),

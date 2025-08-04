@@ -13,11 +13,12 @@ from common.common_services.email_service import EmailService
 from common.email_html_utils import build_loan_email_bodies
 from common.enums import DocumentType, IncomeProofType, LoanType, UploadFileType, LoanStatus
 from common.utils import format_loan_documents, validate_file_type, calculate_emi_schedule
+from config import app_config
 from db_domains import Base
 from db_domains.db import DBSession
 from db_domains.db_interface import DBInterface
 from models.loan import LoanDocument, LoanApplicant, LoanApprovalDetail
-from schemas.loan_schemas import LoanForm, LoanApplicantResponseSchema, UserApprovedLoanForm
+from schemas.loan_schemas import LoanForm, LoanApplicantResponseSchema, UserApprovedLoanForm, InstantCashForm
 
 
 class UserLoanService:
@@ -303,6 +304,31 @@ class UserLoanService:
                         loan_response["emi_info"] = emi_result["data"]
                     else:
                         loan_response["emi_info"] = {"error": emi_result["message"]}
+                elif loan_with_docs.approved_loan and loan_with_docs.status == "USER_ACCEPTED":
+                    user_filter = [
+                        LoanApprovalDetail.applicant_id == loan_application_id
+                    ]
+                    loan_approval_detail = (
+                        session.query(LoanApprovalDetail)
+                        .join(LoanApprovalDetail.applicant)
+                        .filter(*user_filter)
+                        .first()
+                    )
+
+                    if loan_approval_detail:
+                        emi_result = calculate_emi_schedule(
+                            loan_amount=loan_approval_detail.user_accepted_amount,
+                            tenure_months=loan_approval_detail.approved_tenure_months,
+                            annual_interest_rate=loan_approval_detail.approved_interest_rate,
+                            processing_fee=effective_processing_fee,
+                            is_fee_percentage=True
+                        )
+                        if emi_result.get("success"):
+                            loan_response["emi_info"] = emi_result["data"]
+                        else:
+                            loan_response["emi_info"] = {"error": emi_result["message"]}
+                    else:
+                        loan_response["emi_info"] = {"error": "Approved loan not set"}
                 else:
                     loan_response["emi_info"] = {"error": "Approved loan not set"}
             return {
@@ -406,6 +432,68 @@ class UserLoanService:
 
         except Exception as e:
             app_logger.error(f"[add_user_approved_loan] Failed to approve loan: {str(e)}")
+            return {
+                "success": False,
+                "message": gettext("something_went_wrong"),
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": {}
+            }
+
+
+    def calculate_emi_for_instant_cash(self, user_id: int, loan_application_form: InstantCashForm):
+
+        try:
+            app_logger.info(
+                f"[calculate_emi_for_instant_cash] Starting calculate emi applicant_id: {loan_application_form.applicant_id}"
+            )
+
+            emi_result = calculate_emi_schedule(
+                loan_amount=loan_application_form.accepted_amount,
+                tenure_months=loan_application_form.tenure_months,
+                annual_interest_rate=loan_application_form.interest_rate,
+                processing_fee=loan_application_form.processing_fee,
+                is_fee_percentage=True
+            )
+
+            emi = 0.0
+
+            if emi_result["status_code"] == status.HTTP_200_OK:
+                data = emi_result["data"]
+                emi = data.get("monthly_emi")
+
+            if not emi:
+                app_logger.error(f"[calculate_emi_for_instant_cash] Failed for applicant_id: {loan_application_form.applicant_id}")
+                return {
+                    "success": False,
+                    "message": gettext("something_went_wrong"),
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "data": {}
+                }
+
+            gst_charge = app_config.GST_CHARGE
+
+            processing_fee = ((loan_application_form.processing_fee * loan_application_form.accepted_amount)/100)
+
+            other_charges = ((processing_fee * int(gst_charge))/100)
+
+            charges = processing_fee + other_charges
+
+            return {
+                "success": True,
+                "message": gettext("instant_cash_fetched_successfully"),
+                "status_code": status.HTTP_200_OK,
+                "data": {
+                    "loan_amount": loan_application_form.accepted_amount,
+                    "emi": emi,
+                    "tenure_months": loan_application_form.tenure_months,
+                    "interest_rate": loan_application_form.interest_rate,
+                    "charges": charges,
+                    "gst_charge": int(gst_charge),
+                }
+            }
+
+        except Exception as e:
+            app_logger.error(f"[calculate_emi_for_instant_cash] Failed to approve loan: {str(e)}")
             return {
                 "success": False,
                 "message": gettext("something_went_wrong"),

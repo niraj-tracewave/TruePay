@@ -33,6 +33,7 @@ class Setting(BaseSettings):
     RECIPIENT_ADMIN_EMAIL: str
     RAZORPAY_KEY_ID: str
     RAZORPAY_SECRET: str
+    GST_CHARGE: str
 
     # Default Log type
     LOG_LEVEL: str
@@ -96,6 +97,7 @@ class Config(object):
     RECIPIENT_ADMIN_EMAIL = app_settings.RECIPIENT_ADMIN_EMAIL
     RAZORPAY_KEY_ID= app_settings.RAZORPAY_KEY_ID
     RAZORPAY_SECRET=app_settings.RAZORPAY_SECRET
+    GST_CHARGE = app_settings.GST_CHARGE
 
 
 class LocalConfig(Config):
