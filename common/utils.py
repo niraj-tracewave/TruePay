@@ -202,8 +202,8 @@ def calculate_emi_schedule(
         else:
             current_month = start_date.replace(day=1)
 
-        fee_amount = (loan_amount * (processing_fee / 100)) if is_fee_percentage else processing_fee
-        total_principal = loan_amount + fee_amount
+        # fee_amount = (loan_amount * (processing_fee / 100)) if is_fee_percentage else processing_fee
+        total_principal = loan_amount
         monthly_rate = annual_interest_rate / 12 / 100
 
         emi = (total_principal * monthly_rate * (1 + monthly_rate) ** tenure_months) / (
@@ -216,18 +216,18 @@ def calculate_emi_schedule(
         for month in range(tenure_months):
             month_date = current_month + relativedelta(months=month)
             label = month_date.strftime("%b %Y")
-            interest = balance * monthly_rate
-            principal_paid = emi - interest
-            balance -= principal_paid
+            interest = round(balance * monthly_rate, 2)
+            principal_paid = round(emi - interest, 2)
+            balance = round(balance - principal_paid, 2)
             balance = max(balance, 0)
 
             schedule.append(
                 {
                     "month": label,
-                    "principal_paid": round(float(ceil(principal_paid)), 2),
-                    "interest_paid": round(float(ceil(interest)), 2),
-                    "emi": round(float(ceil(emi)), 2),
-                    "balance": round(float(ceil(balance)), 2)
+                    "principal_paid": principal_paid,
+                    "interest_paid": interest,
+                    "emi": round(emi, 2),
+                    "balance": balance
                 }
             )
 
