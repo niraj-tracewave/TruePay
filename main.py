@@ -12,6 +12,7 @@ from app.admin.admin_auth import router as admin_auth_router
 from app.admin.admin_credit import router as admin_credit_router
 from app.admin.admin_dashboard import router as admin_dashboard_router
 from app.admin.admin_loan import router as admin_loan_router
+from app.admin.admin_emi_schedule import router as admin_emi_schedule_router
 from app.user.user_auth import router as user_auth_router
 from app.user.user_loan import router as user_loan_router
 from app.user.user_surpass import router as surpass_router
@@ -69,6 +70,8 @@ app.include_router(admin_dashboard_router)
 app.include_router(surpass_router)
 app.include_router(razorpay_router)
 app.include_router(webhook_router)
+
+app.include_router(admin_emi_schedule_router)
 
 if __name__ == "__main__":
     refresh_cache_strings()
