@@ -223,3 +223,10 @@ class UserApprovedLoanForm(BaseModel):
             self.custom_interest_rate = None
 
         return self
+
+class InstantCashForm(BaseModel):
+    applicant_id: int
+    interest_rate: float
+    processing_fee: float
+    tenure_months: int
+    accepted_amount: float

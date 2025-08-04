@@ -31,6 +31,7 @@ class Setting(BaseSettings):
     SMTP_PASSWORD: str
     IS_PROD: str
     RECIPIENT_ADMIN_EMAIL: str
+    GST_CHARGE: str
 
     # Default Log type
     LOG_LEVEL: str
@@ -92,6 +93,7 @@ class Config(object):
     SMTP_PASSWORD= app_settings.SMTP_PASSWORD
     IS_PROD = app_settings.IS_PROD
     RECIPIENT_ADMIN_EMAIL = app_settings.RECIPIENT_ADMIN_EMAIL
+    GST_CHARGE = app_settings.GST_CHARGE
 
 
 class LocalConfig(Config):
