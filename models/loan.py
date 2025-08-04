@@ -170,3 +170,11 @@ class BankAccount(CreateUpdateTime, CreateByUpdateBy):
     #     UniqueConstraint("account_number", "ifsc_code", name="uq_account_number_ifsc"),
     #     UniqueConstraint("applicant_id", "type", name="uq_loan_type"),
     # )
+
+
+class EmiScheduleDate(CreateUpdateTime, CreateByUpdateBy):
+    __tablename__ = "emi_schedule_date"
+    id = Column(Integer, primary_key=True, index=True)
+
+    emi_schedule_loan_type = Column(Enum(LoanType), nullable=False)
+    emi_schedule_date = Column(Date, nullable=False)
