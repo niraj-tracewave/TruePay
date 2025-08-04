@@ -11,7 +11,7 @@ WEBHOOK_SECRET = "@eQq3b23y6f9_kr"  # Same as Razorpay dashboard
 from fastapi import APIRouter, Request, Query
 from models.user import User
 
-router = APIRouter(prefix="/razorpay")
+router = APIRouter(prefix="/razorpay", tags=["RazorPay API's"])
 
 @router.post("/webhook/")
 async def razorpay_webhook(request: Request, x_razorpay_signature: str = Header(None)):

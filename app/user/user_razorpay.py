@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from services.dependencies import get_razorpay_service
 from services.razorpay_service import RazorpayService
 from schemas.razorpay_schema import CreatePlanSchema, CreateSubscriptionSchema
-router = APIRouter(prefix="/razorpay", tags=["Surpass API's"])
+router = APIRouter(prefix="/razorpay", tags=["RazorPay API's"])
 
 
 @router.post("/create-emi-plan")
