@@ -230,3 +230,15 @@ class InstantCashForm(BaseModel):
     processing_fee: float
     tenure_months: int
     accepted_amount: float
+
+
+class LoanConsentForm(BaseModel):
+    applicant_id: int
+    loan_acceptance_agreement_consent: bool
+    loan_insurance_agreement_consent: Optional[bool] = False
+    loan_policy_and_assignment_consent: bool
+
+
+class LoanDisbursementForm(BaseModel):
+    applicant_id: int
+    available_for_disbursement: bool

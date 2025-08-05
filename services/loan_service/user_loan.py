@@ -1,6 +1,8 @@
 import os
 import uuid
+from datetime import datetime
 from typing import Dict, Any, List, Optional
+from zoneinfo import ZoneInfo
 
 from fastapi import UploadFile, BackgroundTasks
 from sqlalchemy.orm import selectinload, with_loader_criteria
@@ -18,7 +20,8 @@ from db_domains import Base
 from db_domains.db import DBSession
 from db_domains.db_interface import DBInterface
 from models.loan import LoanDocument, LoanApplicant, LoanApprovalDetail
-from schemas.loan_schemas import LoanForm, LoanApplicantResponseSchema, UserApprovedLoanForm, InstantCashForm
+from schemas.loan_schemas import LoanForm, LoanApplicantResponseSchema, UserApprovedLoanForm, InstantCashForm, \
+    LoanConsentForm, LoanDisbursementForm
 
 
 class UserLoanService:
@@ -536,6 +539,83 @@ class UserLoanService:
 
         except Exception as e:
             app_logger.error(f"[calculate_emi_for_instant_cash] Failed to approve loan: {str(e)}")
+            return {
+                "success": False,
+                "message": gettext("something_went_wrong"),
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": {}
+            }
+
+
+    def update_loan_consent(self, user_id: int, loan_consent_form: LoanConsentForm):
+
+        try:
+            app_logger.info(
+                f"[update_loan_consent] applicant_id: {loan_consent_form.applicant_id}"
+            )
+
+            if not self.db_interface.exists_by_id(_id=str(loan_consent_form.applicant_id)):
+                return {
+                    "success": False,
+                    "message": "Loan Data not exists.",
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "data": {}
+                }
+
+            loan_data = loan_consent_form.model_dump(exclude_unset=True)
+            loan_data['modified_by'] = user_id
+            loan_updated_instance = self.db_interface.update(_id=str(loan_consent_form.applicant_id), data=loan_data)
+            app_logger.info(f"{gettext('updated_successfully').format('Loan Consent')}: {loan_updated_instance}")
+
+            return {
+                "success": True,
+                "message": gettext("loan_consent_updated_successfully"),
+                "status_code": status.HTTP_200_OK,
+                "data": {
+                }
+            }
+
+        except Exception as e:
+            app_logger.error(f"[update_loan_consent] Failed to update loan consent: {str(e)}")
+            return {
+                "success": False,
+                "message": gettext("something_went_wrong"),
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": {}
+            }
+
+    def apply_for_disbursement(self, user_id: int, loan_disbursement_form: LoanDisbursementForm):
+
+        try:
+            app_logger.info(
+                f"[apply_for_disbursement] applicant_id: {loan_disbursement_form.applicant_id}"
+            )
+
+            if not self.db_interface.exists_by_id(_id=str(loan_disbursement_form.applicant_id)):
+                return {
+                    "success": False,
+                    "message": "Loan Data not exists.",
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "data": {}
+                }
+
+            loan_data = loan_disbursement_form.model_dump(exclude_unset=True)
+            loan_data['modified_by'] = user_id
+            loan_data['disbursement_apply_date'] = datetime.now(ZoneInfo("Asia/Kolkata"))
+            loan_data['is_disbursement_manual'] = True
+            loan_updated_instance = self.db_interface.update(_id=str(loan_disbursement_form.applicant_id), data=loan_data)
+            app_logger.info(f"{gettext('updated_successfully').format('Loan Disbursement data')}: {loan_updated_instance}")
+
+            return {
+                "success": True,
+                "message": gettext("loan_disbursement_updated_successfully"),
+                "status_code": status.HTTP_200_OK,
+                "data": {
+                }
+            }
+
+        except Exception as e:
+            app_logger.error(f"[apply_for_disbursement] Failed to update loan consent: {str(e)}")
             return {
                 "success": False,
                 "message": gettext("something_went_wrong"),
