@@ -68,6 +68,8 @@ class UserLoanService:
                 "credit_score": loan_application_form.credit_score if loan_application_form.credit_score else 0,
                 "created_by": user_id,
                 "modified_by": user_id,
+                "pan_verified": loan_application_form.pan_verified,
+                "aadhaar_verified": loan_application_form.aadhaar_verified,
             }
 
             # Save loan applicant to DB
@@ -200,6 +202,9 @@ class UserLoanService:
                     "desired_loan": loan.desired_loan,
                     "annual_income": loan.annual_income,
                     "purpose_of_loan": loan.purpose_of_loan,
+                    "aadhaar_verified": loan.aadhaar_verified,
+                    "pan_verified": loan.pan_verified,
+                    "available_for_disbursement": loan.available_for_disbursement,
                     "documents": [
                         {
                             "id": doc.id,
@@ -288,6 +293,8 @@ class UserLoanService:
                 loan_response["available_for_disbursement"] = loan_with_docs.available_for_disbursement
                 loan_response["disbursement_apply_date"] = loan_with_docs.disbursement_apply_date
                 loan_response["is_disbursement_manual"] = loan_with_docs.is_disbursement_manual
+                loan_response["pan_verified"] = loan_with_docs.pan_verified
+                loan_response["aadhaar_verified"] = loan_with_docs.aadhaar_verified
 
                 loan_response["approval_details"] = [
                     {
