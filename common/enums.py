@@ -75,3 +75,9 @@ class GenderEnum(str, Enum):
 class ConsentEnum(str, Enum):
     yes = "Y"
     no = "N"
+
+class PaymentType(str, Enum):
+    BANK_TRANSFER = "BANK_TRANSFER"
+    CASH = "CASH"
+    CHEQUE = "CHEQUE"
+    UPI = "UPI"
