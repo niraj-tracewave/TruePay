@@ -261,6 +261,7 @@ class UserLoanService:
                         selectinload(LoanApplicant.bank_accounts),
                         selectinload(LoanApplicant.approval_details),
                         selectinload(LoanApplicant.credit_score_range_rate),
+                        selectinload(LoanApplicant.loan_disbursement),
                         with_loader_criteria(LoanDocument, LoanDocument.is_deleted == False)
                     )
                     .filter(*filters)
@@ -281,6 +282,12 @@ class UserLoanService:
                 loan_response["tenure_months_steps"]=6
                 loan_response["effective_interest_rate"] = self.get_effective_rate(loan_with_docs)
                 formatted_documents = format_loan_documents(loan_with_docs.documents) if loan_with_docs else []
+                loan_response["loan_acceptance_agreement_consent"] = loan_with_docs.loan_acceptance_agreement_consent
+                loan_response["loan_insurance_agreement_consent"] = loan_with_docs.loan_insurance_agreement_consent
+                loan_response["loan_policy_and_assignment_consent"] = loan_with_docs.loan_policy_and_assignment_consent
+                loan_response["available_for_disbursement"] = loan_with_docs.available_for_disbursement
+                loan_response["disbursement_apply_date"] = loan_with_docs.disbursement_apply_date
+                loan_response["is_disbursement_manual"] = loan_with_docs.is_disbursement_manual
 
                 loan_response["approval_details"] = [
                     {
@@ -304,6 +311,25 @@ class UserLoanService:
                             "ifsc_code": bank_account.ifsc_code
                         }
                     for bank_account in loan_with_docs.bank_accounts ]
+                loan_response["documents"] = formatted_documents
+
+                loan_response["loan_disbursement"] = [
+                    {
+                        "id": loan_disbursement_obj.id,
+                        "applicant_id": loan_disbursement_obj.applicant_id,
+                        "payment_date": loan_disbursement_obj.payment_date,
+                        "transferred_amount": loan_disbursement_obj.transferred_amount,
+                        "payment_type": loan_disbursement_obj.payment_type,
+                        "bank_name": loan_disbursement_obj.bank_name,
+                        "account_number": loan_disbursement_obj.account_number,
+                        "account_holder_name": loan_disbursement_obj.account_holder_name,
+                        "payment_file": loan_disbursement_obj.payment_file,
+                        "cheque_number": loan_disbursement_obj.cheque_number,
+                        "ifsc_code": loan_disbursement_obj.ifsc_code,
+                        "upi_id": loan_disbursement_obj.upi_id,
+                        "transaction_id": loan_disbursement_obj.transaction_id
+                    }
+                    for loan_disbursement_obj in loan_with_docs.loan_disbursement]
                 loan_response["documents"] = formatted_documents
 
                 effective_processing_fee = self.get_effective_processing_fee(loan_with_docs)
@@ -331,7 +357,7 @@ class UserLoanService:
                     loan_response["processing_fee_charge"] = processing_fee
                     loan_response["other_charges"] = other_charges
 
-                elif loan_with_docs.approved_loan and loan_with_docs.status == "USER_ACCEPTED":
+                elif loan_with_docs.approved_loan and loan_with_docs.status in ["USER_ACCEPTED", "DISBURSED"]:
                     user_filter = [
                         LoanApprovalDetail.applicant_id == loan_application_id
                     ]
