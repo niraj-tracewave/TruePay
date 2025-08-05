@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, Query, Request, BackgroundTasks
 from starlette import status
@@ -82,6 +82,29 @@ async def update_loan_application(request: Request, loan_id: str):
     user_state = getattr(request.state, "user", None)
 
     response = admin_loan_service.delete_loan_applications(logged_in_user_id=user_state.get("id"), loan_id=loan_id)
+
+    return ApiResponse.create_response(
+        success=response.get("success"),
+        message=response.get("message"),
+        status_code=response.get("status_code", status.HTTP_200_OK),
+        data=response.get("data")
+    )
+
+@router.get("/get-all-user-approved-loans", summary="Get User Approved All Loan Application")
+def get_all_user_approved_loans(
+        search: Optional[str] = Query(None, description="Search text for name, phone, email"),
+        status_filter: Optional[List[str]] = Query(None, description="Filter by multiple statuses"),
+        order_by: Optional[str] = Query(None, description="Field Name to Order By"),
+        order_direction: Optional[str] = Query(None, description="Field Name to Order Direction"),
+        limit: int = Query(10, description="Number of items per page"),
+        offset: int = Query(0, description="Number of items to skip"),
+        start_date: Optional[str] = Query(None, description="Start Date for Range Filter"),
+        end_date: Optional[str] = Query(None, description="End Date for Range Filter"),
+):
+    response = admin_loan_service.get_all_user_approved_loans(
+        search=search, status_filter=status_filter, order_by=order_by, order_direction=order_direction, limit=limit,
+        offset=offset, start_date=start_date, end_date=end_date
+    )
 
     return ApiResponse.create_response(
         success=response.get("success"),
