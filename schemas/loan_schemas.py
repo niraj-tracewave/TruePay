@@ -184,10 +184,10 @@ class UserApprovedLoanForm(BaseModel):
     applicant_id: int
     approved_interest_rate: float
     final_interest_rate: float
-    custom_interest_rate: float
+    custom_interest_rate: Optional[float] = None
     approved_processing_fee: float
     processing_fee_amount: float
-    custom_processing_fee: float
+    custom_processing_fee: Optional[float] = None
     approved_tenure_months: int
     final_tenure_months: int
     user_accepted_amount: float
@@ -216,11 +216,11 @@ class UserApprovedLoanForm(BaseModel):
         if self.user_accepted_amount is None and self.approved_loan_amount is None:
             raise ValueError("User Accepted Amount and Approved Loan Amount is required for Final Approval")
 
-        if self.custom_processing_fee == 0:
-            self.custom_processing_fee = None
-
-        if self.custom_interest_rate == 0:
-            self.custom_interest_rate = None
+        # if self.custom_processing_fee == 0:
+        #     self.custom_processing_fee = None
+        #
+        # if self.custom_interest_rate == 0:
+        #     self.custom_interest_rate = None
 
         return self
 

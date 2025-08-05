@@ -256,6 +256,7 @@ class UserLoanService:
                     .options(
                         selectinload(LoanApplicant.documents),
                         selectinload(LoanApplicant.bank_accounts),
+                        selectinload(LoanApplicant.approval_details),
                         selectinload(LoanApplicant.credit_score_range_rate),
                         with_loader_criteria(LoanDocument, LoanDocument.is_deleted == False)
                     )
@@ -277,6 +278,19 @@ class UserLoanService:
                 loan_response["tenure_months_steps"]=6
                 loan_response["effective_interest_rate"] = self.get_effective_rate(loan_with_docs)
                 formatted_documents = format_loan_documents(loan_with_docs.documents) if loan_with_docs else []
+
+                loan_response["approval_details"] = [
+                    {
+                        "id": approval_detail.id,
+                        "applicant_id": approval_detail.applicant_id,
+                        "user_accepted_amount": approval_detail.user_accepted_amount,
+                        "disbursed_amount": approval_detail.disbursed_amount,
+                        "approved_interest_rate": approval_detail.approved_interest_rate,
+                        "approved_processing_fee": approval_detail.approved_processing_fee,
+                        "approved_tenure_months": approval_detail.approved_tenure_months
+                    }
+                for approval_detail in loan_with_docs.approval_details ]
+
                 loan_response["bank_accounts"] = [
                         {
                             "id": bank_account.id,
@@ -291,19 +305,31 @@ class UserLoanService:
 
                 effective_processing_fee = self.get_effective_processing_fee(loan_with_docs)
 
-                if loan_with_docs.approved_loan and loan_with_docs.status == "APPROVED":
-                    emi_result = calculate_emi_schedule(
-                        loan_amount=loan_with_docs.approved_loan,
-                        tenure_months=loan_with_docs.tenure_months,
-                        annual_interest_rate=loan_response["effective_interest_rate"],
-                        processing_fee=effective_processing_fee,
-                        is_fee_percentage=True
-                    )
+                gst_charge = app_config.GST_CHARGE
 
-                    if emi_result.get("success"):
-                        loan_response["emi_info"] = emi_result["data"]
-                    else:
-                        loan_response["emi_info"] = {"error": emi_result["message"]}
+                if loan_with_docs.approved_loan and loan_with_docs.status == "APPROVED":
+                    # emi_result = calculate_emi_schedule(
+                    #     loan_amount=loan_with_docs.approved_loan,
+                    #     tenure_months=loan_with_docs.tenure_months,
+                    #     annual_interest_rate=loan_response["effective_interest_rate"],
+                    #     processing_fee=effective_processing_fee,
+                    #     is_fee_percentage=True
+                    # )
+
+                    # if emi_result.get("success"):
+                    #     loan_response["emi_info"] = emi_result["data"]
+                    # else:
+                    #     loan_response["emi_info"] = {"error": emi_result["message"]}
+
+                    loan_response["emi_info"] = {}
+
+                    processing_fee = ((effective_processing_fee * loan_with_docs.approved_loan) / 100)
+                    other_charges = ((processing_fee * int(gst_charge)) / 100)
+                    charges = processing_fee + other_charges
+                    loan_response["charges"] = charges
+                    loan_response["processing_fee_charge"] = processing_fee
+                    loan_response["other_charges"] = other_charges
+
                 elif loan_with_docs.approved_loan and loan_with_docs.status == "USER_ACCEPTED":
                     user_filter = [
                         LoanApprovalDetail.applicant_id == loan_application_id
@@ -326,11 +352,23 @@ class UserLoanService:
                         if emi_result.get("success"):
                             loan_response["emi_info"] = emi_result["data"]
                         else:
-                            loan_response["emi_info"] = {"error": emi_result["message"]}
+                            # loan_response["emi_info"] = {"error": emi_result["message"]}
+                            loan_response["emi_info"] = {}
                     else:
-                        loan_response["emi_info"] = {"error": "Approved loan not set"}
+                        # loan_response["emi_info"] = {"error": "Approved loan not set"}
+                        loan_response["emi_info"] = {}
+
+                    processing_fee = ((effective_processing_fee * loan_approval_detail.user_accepted_amount) / 100)
+                    other_charges = ((processing_fee * int(gst_charge)) / 100)
+                    charges = processing_fee + other_charges
+                    loan_response["charges"] = charges
+                    loan_response["processing_fee"] = processing_fee
+                    loan_response["other_charges"] = other_charges
                 else:
-                    loan_response["emi_info"] = {"error": "Approved loan not set"}
+                    loan_response["emi_info"] = {}
+                    loan_response["charges"] = 0.0
+                    loan_response["processing_fee_charge"] = 0.0
+                    loan_response["other_charges"] = 0.0
             return {
                 "success": True,
                 "message": gettext("retrieved_successfully").format("Loan Application"),
@@ -390,6 +428,11 @@ class UserLoanService:
                 f"[add_user_approved_loan] Starting approval process for applicant_id: {loan_application_form.applicant_id}"
             )
 
+            gst_charge = app_config.GST_CHARGE
+            processing_fee = ((loan_application_form.approved_processing_fee * loan_application_form.user_accepted_amount) / 100)
+            other_charges = ((processing_fee * int(gst_charge)) / 100)
+            charges = processing_fee + other_charges
+
             # Step 1: Create LoanApprovalDetail
             approval_data = {
                 "applicant_id": loan_application_form.applicant_id,
@@ -404,7 +447,8 @@ class UserLoanService:
                 "user_accepted_amount": loan_application_form.user_accepted_amount,
                 "approved_loan_amount": loan_application_form.approved_loan_amount,
                 "created_by": user_id,
-                "modified_by": user_id
+                "modified_by": user_id,
+                "disbursed_amount": loan_application_form.user_accepted_amount - charges
             }
 
             approval_instance = approval_interface.create(approval_data)

@@ -50,6 +50,8 @@ class LoanApplicant(CreateUpdateTime, CreateByUpdateBy):
     credit_score_range_rate = relationship("CreditScoreRangeRate")
     documents = relationship("LoanDocument", back_populates="applicant", cascade="all, delete-orphan")
     bank_accounts = relationship("BankAccount", back_populates="applicant", cascade="all, delete-orphan")
+    approval_details = relationship("LoanApprovalDetail", back_populates="applicant", cascade="all, delete-orphan", overlaps="approval_details")
+
 
     def __repr__(self):
         return f"<LoanApplicant id={self.id} uid={self.loan_uid} name={self.name} status={self.status}>"
