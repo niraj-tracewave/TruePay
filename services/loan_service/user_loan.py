@@ -308,20 +308,18 @@ class UserLoanService:
                 gst_charge = app_config.GST_CHARGE
 
                 if loan_with_docs.approved_loan and loan_with_docs.status == "APPROVED":
-                    # emi_result = calculate_emi_schedule(
-                    #     loan_amount=loan_with_docs.approved_loan,
-                    #     tenure_months=loan_with_docs.tenure_months,
-                    #     annual_interest_rate=loan_response["effective_interest_rate"],
-                    #     processing_fee=effective_processing_fee,
-                    #     is_fee_percentage=True
-                    # )
+                    emi_result = calculate_emi_schedule(
+                        loan_amount=loan_with_docs.approved_loan,
+                        tenure_months=loan_with_docs.tenure_months,
+                        annual_interest_rate=loan_response["effective_interest_rate"],
+                        processing_fee=effective_processing_fee,
+                        is_fee_percentage=True
+                    )
 
-                    # if emi_result.get("success"):
-                    #     loan_response["emi_info"] = emi_result["data"]
-                    # else:
-                    #     loan_response["emi_info"] = {"error": emi_result["message"]}
-
-                    loan_response["emi_info"] = {}
+                    if emi_result.get("success"):
+                        loan_response["emi_info"] = emi_result["data"]
+                    else:
+                        loan_response["emi_info"] = {}
 
                     processing_fee = ((effective_processing_fee * loan_with_docs.approved_loan) / 100)
                     other_charges = ((processing_fee * int(gst_charge)) / 100)
