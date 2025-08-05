@@ -6,7 +6,7 @@ from starlette import status
 from common.enums import UploadFileType
 from common.response import ApiResponse
 from models.loan import LoanApplicant
-from schemas.loan_schemas import LoanForm, UserApprovedLoanForm, InstantCashForm
+from schemas.loan_schemas import LoanForm, UserApprovedLoanForm, InstantCashForm, LoanConsentForm, LoanDisbursementForm
 from services.loan_service.user_loan import UserLoanService
 
 router = APIRouter(prefix="/loan", tags=["User Panel Loan API's"])
@@ -84,6 +84,30 @@ def calculate_instant_cash(request: Request, form_data: InstantCashForm):
     user_state = getattr(request.state, "user", None)
 
     response = loan_service.calculate_emi_for_instant_cash(user_id=user_state.get("id"), loan_application_form=form_data)
+    return ApiResponse.create_response(
+        success=response.get("success"),
+        message=response.get("message"),
+        status_code=response.get("status_code", status.HTTP_200_OK),
+        data=response.get("data")
+    )
+
+@router.post("/accept-consent", summary="Accept Consent of Loan")
+def update_loan_consent(request: Request, form_data: LoanConsentForm):
+    user_state = getattr(request.state, "user", None)
+
+    response = loan_service.update_loan_consent(user_id=user_state.get("id"), loan_consent_form=form_data)
+    return ApiResponse.create_response(
+        success=response.get("success"),
+        message=response.get("message"),
+        status_code=response.get("status_code", status.HTTP_200_OK),
+        data=response.get("data")
+    )
+
+@router.post("/loan-proceed-for-disbursement", summary="Approve Loan for Disbursement")
+def proceed_for_disbursement(request: Request, form_data: LoanDisbursementForm):
+    user_state = getattr(request.state, "user", None)
+
+    response = loan_service.apply_for_disbursement(user_id=user_state.get("id"), loan_disbursement_form=form_data)
     return ApiResponse.create_response(
         success=response.get("success"),
         message=response.get("message"),

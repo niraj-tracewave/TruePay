@@ -46,6 +46,13 @@ class LoanApplicant(CreateUpdateTime, CreateByUpdateBy):
     processing_fee = Column(Float, nullable=True)
     custom_processing_fee = Column(Float, nullable=True)
     tenure_months = Column(Integer, nullable=True)
+    loan_acceptance_agreement_consent = Column(Boolean, default=False)
+    loan_insurance_agreement_consent = Column(Boolean, default=False)
+    loan_policy_and_assignment_consent = Column(Boolean, default=False)
+
+    available_for_disbursement = Column(Boolean, default=False)
+    disbursement_apply_date = Column(DateTime, nullable=True)
+    is_disbursement_manual = Column(Boolean, default=False)
 
     credit_score_range_rate = relationship("CreditScoreRangeRate")
     documents = relationship("LoanDocument", back_populates="applicant", cascade="all, delete-orphan")

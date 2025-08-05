@@ -32,5 +32,7 @@
     "access_token_required": "Access token required",
     "unauthorized_access": "You are not authorized to access this resource.",
     "approved_successfully": "Loan Approved Successfully",
-    "instant_cash_fetched_successfully": "EMI for Instant cash calculate successfully."
+    "instant_cash_fetched_successfully": "EMI for Instant cash calculate successfully.",
+    "loan_consent_updated_successfully": "Loan Consent updated successfully.",
+    "loan_disbursement_updated_successfully": "Loan processed for Disbursement successfully."
 }
