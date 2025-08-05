@@ -363,7 +363,7 @@ class UserLoanService:
                     other_charges = ((processing_fee * int(gst_charge)) / 100)
                     charges = processing_fee + other_charges
                     loan_response["charges"] = charges
-                    loan_response["processing_fee"] = processing_fee
+                    loan_response["processing_fee_charge"] = processing_fee
                     loan_response["other_charges"] = other_charges
                 else:
                     loan_response["emi_info"] = {}
