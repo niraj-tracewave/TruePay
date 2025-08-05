@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 from starlette import status
 
@@ -298,4 +298,118 @@ class AdminLoanService(UserLoanService):
                 "message": gettext("something_went_wrong"),
                 "status_code": status.HTTP_400_BAD_REQUEST,
                 "data": {}
+            }
+
+    def get_all_user_approved_loans(
+            self, search: Optional[str] = None, status_filter: Optional[List[str]] = None,
+            order_by: Optional[str] = None, order_direction: Optional[str] = None, limit: int = 10, offset: int = 0,
+            start_date: Optional[str] = None, end_date: Optional[str] = None
+    ):
+        try:
+            app_logger.info("Fetching all loan applications")
+
+            filter_def = {
+                "AND": [
+                    {"field": "is_deleted", "op": "==", "value": False}
+                ]
+            }
+            total_loans = self.db_interface.count_all_by_fields(
+                filters=[LoanApplicant.is_deleted == False]
+            )
+
+            if status_filter:
+                filter_def["AND"].append({
+                    "field": "status",
+                    "op": "in",
+                    "value": status_filter
+                })
+            date_format = "%Y-%m-%d"
+            if start_date and end_date:
+                try:
+                    start = datetime.strptime(start_date, date_format)
+                    end = datetime.strptime(end_date, date_format) + timedelta(days=1) - timedelta(seconds=1)
+
+                    filter_def["AND"].append({"field": "created_at", "op": ">=", "value": start})
+                    filter_def["AND"].append({"field": "created_at", "op": "<=", "value": end})
+
+                except ValueError:
+                    raise ValueError("Invalid date format. Use YYYY-MM-DD for both start_date and end_date.")
+
+            # 🔍 Search filter
+            if search and search.strip() != "":
+                like_value = f"%{search.lower()}%"
+                filter_def["AND"].append(
+                    {
+                        "OR": [
+                            {"field": "name", "op": "ilike", "value": like_value},
+                            {"field": "email", "op": "ilike", "value": like_value},
+                            {"field": "phone_number", "op": "ilike", "value": like_value},
+                            {"field": "loan_uid", "op": "ilike", "value": like_value}
+                        ]
+                    }
+                )
+
+            filter_expr = self.db_interface.build_filter_expression(filter_def)
+
+            order_column = getattr(
+                LoanApplicant, order_by, LoanApplicant.created_at
+            ) if order_by else LoanApplicant.created_at
+            order_direction = order_direction.lower() if order_direction else "desc"
+
+            if offset != 0:
+                final_offset = (offset - 1) * limit
+            else:
+                final_offset = offset
+
+            loans = self.db_interface.read_all_by_filters(
+                filter_expr=filter_expr,
+                order_by=order_column,
+                order_direction=order_direction,
+                limit=limit,
+                offset=final_offset
+            )
+
+            loan_list = []
+            credit_score_range_rate = DBInterface(CreditScoreRangeRate)
+            for loan in loans:
+                loan_data = LoanApplicantResponseSchema.model_validate(loan).model_dump(exclude={"documents"})
+
+                # Fetch matching interest rate info for this loan's type
+                rate_entry = credit_score_range_rate.read_by_fields(
+                    fields=[CreditScoreRangeRate.loan_type == loan.loan_type]
+                )
+
+                # Attach rate info if available
+                if rate_entry:
+                    credit_score_rate_info = [{
+                        "id": i.id,
+                        "min_score": i.min_score,
+                        "max_score": i.max_score,
+                        "rate_percentage": i.rate_percentage
+                    } for i in rate_entry]
+                    loan_data["credit_score_rate_info"] = credit_score_rate_info
+                else:
+                    loan_data["credit_score_rate_info"] = {}
+
+                loan_list.append(loan_data)
+
+            return {
+                "success": True,
+                "message": gettext("retrieved_successfully").format("Loan Applications") if loan_list else gettext(
+                    "no_module_found"
+                ).format("Loan Application"),
+                "status_code": status.HTTP_200_OK if loan_list else status.HTTP_404_NOT_FOUND,
+                "data": {
+                    "loan_applications": loan_list,
+                    "total_count": total_loans
+                }
+            }
+
+        except Exception as e:
+            app_logger.error(f"Error retrieving loans: {e}", exc_info=True)
+            return {
+                "success": False,
+                "message": str(e),
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": []
             }
