@@ -24,8 +24,7 @@ sub_service = SubscriptionService(Subscription)
 @router.post("/create-razorpay-plan-sub/{applicant_id}")
 def create_emi_mandate(
     request: Request,
-    applicant_id: str,
-    payload: CreatePlanSchema,  # Assuming this is needed; otherwise, remove
+    applicant_id: str,  # Assuming this is needed; otherwise, remove
     service: RazorpayService = Depends(get_razorpay_service)
 ):
     user_state = getattr(request.state, "user", None)
