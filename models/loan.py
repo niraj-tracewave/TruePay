@@ -60,7 +60,7 @@ class LoanApplicant(CreateUpdateTime, CreateByUpdateBy):
     documents = relationship("LoanDocument", back_populates="applicant", cascade="all, delete-orphan")
     bank_accounts = relationship("BankAccount", back_populates="applicant", cascade="all, delete-orphan")
     approval_details = relationship("LoanApprovalDetail", back_populates="applicant", cascade="all, delete-orphan", overlaps="approval_details")
-        loan_disbursement = relationship("LoanDisbursementDetail", back_populates="applicant", cascade="all, delete-orphan")
+    loan_disbursement = relationship("LoanDisbursementDetail", back_populates="applicant", cascade="all, delete-orphan")
 
     plans = relationship("Plan", back_populates="applicant", cascade="all, delete-orphan")
 

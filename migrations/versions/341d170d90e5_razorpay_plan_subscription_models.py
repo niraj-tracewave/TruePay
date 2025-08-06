@@ -1,8 +1,8 @@
-"""Add Razorpay table
+"""RazorPay Plan + Subscription Models
 
-Revision ID: 17193e59656c
-Revises: 40481f51ec19
-Create Date: 2025-08-06 12:03:44.693614
+Revision ID: 341d170d90e5
+Revises: 8170c7077e39
+Create Date: 2025-08-06 15:59:05.036529
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '17193e59656c'
-down_revision: Union[str, Sequence[str], None] = '40481f51ec19'
+revision: str = '341d170d90e5'
+down_revision: Union[str, Sequence[str], None] = '8170c7077e39'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
