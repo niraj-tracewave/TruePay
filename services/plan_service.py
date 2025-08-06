@@ -1,7 +1,5 @@
 from config import app_config
 from typing import Any
-from fastapi import Depends
-from services.dependencies import get_razorpay_service
 
 from starlette import status
 
@@ -11,6 +9,7 @@ from db_domains.db_interface import DBInterface
 from models.razorpay import Plan
 from schemas.razorpay_schema import CreatePlanSchema
 from services.razorpay_service import RazorpayService
+from fastapi import HTTPException
 
 
 class PlanService:
@@ -33,12 +32,10 @@ class PlanService:
             )
 
             if existing_entry:
-                return {
-                    "success": False,
-                    "message": f"Emi Plan Is already exists for this loan Detail {applicant_id}.",
-                    "status_code": status.HTTP_400_BAD_REQUEST,
-                    "data": {}
-                }
+               raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"EMI Plan already exists for loan detail {applicant_id}."
+                )
             service = RazorpayService(
                 app_config.RAZORPAY_KEY_ID, app_config.RAZORPAY_SECRET)
             plan_data = form_data
@@ -58,19 +55,8 @@ class PlanService:
             }
             data["created_by"] = user_id
             new_entry = self.db_interface.create(data=data)
-            return {
-                "success": True,
-                "message": f"New Plan for Loan ID {applicant_id} added successfully",
-                "status_code": status.HTTP_200_OK,
-                "data": new_entry
-            }
+            return new_entry
 
         except Exception as e:
-            app_logger.exception(
-                f"[UserID: {user_id}] Error Loan Plan Details: {str(e)}")
-            return {
-                "success": False,
-                "message": str(e),
-                "status_code": status.HTTP_400_BAD_REQUEST,
-                "data": {}
-            }
+            raise e
+            

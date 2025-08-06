@@ -34,12 +34,33 @@ def create_emi_mandate(request: Request, applicant_id: str, payload: CreatePlanS
         loan_details = (
             session.query(LoanApplicant)
             .options(
+                selectinload(LoanApplicant.plans).selectinload(Plan.subscriptions),
                 selectinload(LoanApplicant.approval_details),
             )
             .filter(*filters)
             .first()
         )
+    if not loan_details:
+        return {
+            "success": False,
+            "message": "Loan applicant not found",
+            "status_code": status.HTTP_404_NOT_FOUND,
+            "data": {}
+        }
 
+    first_plan = loan_details.plans[0] if loan_details.plans else None
+    subscription = first_plan.subscriptions[0] if first_plan and first_plan.subscriptions   else None
+    
+    if first_plan and subscription:
+        return {
+            "success": True,
+            "message": "Successfully retrieved Plan & corresponding Subscription",
+            "status_code": status.HTTP_200_OK,
+            "data": {
+                "plan_data": first_plan,
+                "subscription_data": subscription
+            }
+        }
     loan_approval_detail = loan_details.approval_details[0]
     # Step -2 Fetch Approved Loan
     # if loan_approval_detail:
@@ -60,49 +81,58 @@ def create_emi_mandate(request: Request, applicant_id: str, payload: CreatePlanS
         data = emi_result["data"]
         emi = data.get("monthly_emi")
     # Step-2 Create Plan Based On provided Loan
-    created_plan = plan_service.add_plan(
-        applicant_id=loan_details.id,
-        user_id=user_state.get("id"),
-        form_data={
-            "period": "monthly",
-            "interval": 1,
-            "item": {
-                "name": f"{loan_details.loan_uid}_" + "05082025",
-                "amount": emi*100,  # NOTE: RAZORPAY *100 LOGIC
-                "currency": "INR",
-                "description": f"₹{user_accepted_amount} loan at {approved_interest_rate}% interest for {approved_tenure_months} months"
-            },
-        }
-    )
-    plan_db_obj = created_plan.get("data")
-    # Step-3 After Creating Plan Create Subscription
-    if created_plan.get("success") == True:
-        created_sub = sub_service.add_subscription(
-            plan_id=plan_db_obj.id,
+    try:
+        created_plan = plan_service.add_plan(
+            applicant_id=loan_details.id,
             user_id=user_state.get("id"),
             form_data={
-                "plan_id": plan_db_obj.razorpay_plan_id,
-                "total_count": approved_tenure_months,
-                "quantity": 1,
-                # "start_at": Optional[int] = None  # Unix timestamp
-                # "expire_by": Optional[int] = None  # Unix timestamp
-                "customer_notify": 1,
-                # "addons": [],
-                # "offer_id": Optional[str] = None
-                # "notes": Optional[Notes] = None
+                "period": "monthly",
+                "interval": 1,
+                "item": {
+                    "name": f"{loan_details.loan_uid}_" + "05082025",
+                    "amount": emi*100,  # NOTE: RAZORPAY *100 LOGIC
+                    "currency": "INR",
+                    "description": f"₹{user_accepted_amount} loan at {approved_interest_rate}% interest for {approved_tenure_months} months"
+                },
             }
         )
-        
-        if created_sub.get("success") == True:
-            return {
-                "success": True,
-                "message": f"Successfully Created Plan & corresponding Subscription",
-                "status_code": status.HTTP_200_OK,
-                "data": {
-                    "plan_data": created_plan,
-                    "subscription_data": created_sub
+        if created_plan:
+            # plan_db_obj = created_plan.get("data")
+            # Step-3 After Creating Plan Create Subscription
+            # if created_plan.get("success") == True:
+            created_sub = sub_service.add_subscription(
+                plan_id=created_plan.id,
+                user_id=user_state.get("id"),
+                form_data={
+                    "plan_id": created_plan.razorpay_plan_id,
+                    "total_count": approved_tenure_months,
+                    "quantity": 1,
+                    # "start_at": Optional[int] = None  # Unix timestamp
+                    # "expire_by": Optional[int] = None  # Unix timestamp
+                    "customer_notify": 1,
+                    # "addons": [],
+                    # "offer_id": Optional[str] = None
+                    # "notes": Optional[Notes] = None
                 }
-            }
+            )
+
+            if created_sub:
+                return {
+                    "success": True,
+                    "message": f"Successfully Created Plan & corresponding Subscription",
+                    "status_code": status.HTTP_200_OK,
+                    "data": {
+                        "plan_data": created_plan,
+                        "subscription_data": created_sub
+                    }
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": "Something went wrong",
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "data": {}
+                }
         else:
             return {
                 "success": False,
@@ -110,15 +140,13 @@ def create_emi_mandate(request: Request, applicant_id: str, payload: CreatePlanS
                 "status_code": status.HTTP_400_BAD_REQUEST,
                 "data": {}
             }
-    else:
+    except Exception as e:
         return {
-                "success": False,
-                "message": "Something went wrong",
-                "status_code": status.HTTP_400_BAD_REQUEST,
-                "data": {}
-            }
-            
-
+            "success": False,
+            "message": str(e),
+            "status_code": status.HTTP_400_BAD_REQUEST,
+            "data": {}
+        }
 
 
 @router.post("/create-emi-plan")

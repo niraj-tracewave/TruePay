@@ -1,10 +1,8 @@
-from config import app_config
 from typing import Any
-from fastapi import Depends
-from services.dependencies import get_razorpay_service
-
+from fastapi import HTTPException
 from starlette import status
 
+from config import app_config
 from app_logging import app_logger
 from db_domains import Base
 from db_domains.db_interface import DBInterface
@@ -33,21 +31,19 @@ class SubscriptionService:
             )
 
             if existing_entry:
-                return {
-                    "success": False,
-                    "message": f"Subscription is already exists for this Plan Detail {plan_id}.",
-                    "status_code": status.HTTP_400_BAD_REQUEST,
-                    "data": {}
-                }
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"EMI Subscription Is already exists for plan detail {plan_id}."
+                )
             service = RazorpayService(
                 app_config.RAZORPAY_KEY_ID, app_config.RAZORPAY_SECRET)
             new_sub = service.create_subscription(form_data)
             print("new sub", new_sub)
             data = {
                 "status": "created",
-                "razorpay_subscription_id":new_sub.get("id"),
+                "razorpay_subscription_id": new_sub.get("id"),
                 "entity": new_sub.get("entity"),
-                "plan_id":plan_id,
+                "plan_id": plan_id,
                 "quantity": new_sub.get("quantity"),
                 "total_count": new_sub.get("total_count"),
                 "paid_count": new_sub.get("paid_count"),
@@ -62,25 +58,13 @@ class SubscriptionService:
                 "change_scheduled_at": new_sub.get("change_scheduled_at"),
                 # upcoming_invoice_id = Column(String, nullable=True)
                 # addons = Column(JSON, nullable=True)  # JSON string
-                "auth_attempts" : new_sub.get("auth_attempts"),
-                "subscription_data" :  new_sub
+                "auth_attempts": new_sub.get("auth_attempts"),
+                "subscription_data":  new_sub
 
             }
             data["created_by"] = user_id
             new_entry = self.db_interface.create(data=data)
-            return {
-                "success": True,
-                "message": f"New Subscription for Plan ID {plan_id} added successfully",
-                "status_code": status.HTTP_200_OK,
-                "data": new_entry
-            }
+            return new_entry
 
         except Exception as e:
-            app_logger.exception(
-                f"[UserID: {user_id}] Error Subscription Details: {str(e)}")
-            return {
-                "success": False,
-                "message": str(e),
-                "status_code": status.HTTP_400_BAD_REQUEST,
-                "data": {}
-            }
+            raise e
