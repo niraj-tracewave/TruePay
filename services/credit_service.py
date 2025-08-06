@@ -112,6 +112,29 @@ class CreditScoreService:
                     "data": {}
                 }
 
+            with DBSession() as session:
+                overlapping_entry = (
+                    session.query(CreditScoreRangeRate)
+                    .filter(
+                        CreditScoreRangeRate.loan_type == existing_entry.loan_type,
+                        CreditScoreRangeRate.is_deleted == False,
+                        CreditScoreRangeRate.id != credit_range_id,
+                        and_(
+                            CreditScoreRangeRate.min_score <= form_data.max_score,
+                            CreditScoreRangeRate.max_score >= form_data.min_score
+                        )
+                    )
+                    .first()
+                )
+
+            if overlapping_entry:
+                return {
+                    "success": False,
+                    "message": "Interest Rate already exists for this Credit Score range and Loan Type",
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "data": {}
+                }
+
             # Prepare update fields based on provided data
             update_fields = {}
             if form_data.label is not None:
@@ -229,15 +252,27 @@ class CreditScoreService:
                 f"max={form_data.max_score}"
             )
 
-            existing_entry = processing_fee_db_interface.read_single_by_fields(
-                fields=[
-                    ProcessingFee.min_score == form_data.min_score,
-                    ProcessingFee.max_score == form_data.max_score,
-                    ProcessingFee.is_deleted == False,
-                ]
-            )
+            with DBSession() as session:
+                overlapping_entry = (
+                    session.query(ProcessingFee)
+                    .filter(
+                        ProcessingFee.is_deleted == False,
+                        and_(
+                            ProcessingFee.min_score <= form_data.max_score,
+                            ProcessingFee.max_score >= form_data.min_score
+                        )
+                    )
+                    .first()
+                )
 
-            if existing_entry:
+            # existing_entry = processing_fee_db_interface.read_single_by_fields(
+            #     fields=[
+            #         ProcessingFee.min_score == form_data.min_score,
+            #         ProcessingFee.max_score == form_data.max_score,
+            #         ProcessingFee.is_deleted == False,
+            #     ]
+            # )
+            if overlapping_entry:
                 return {
                     "success": False,
                     "message": "Processing fee already exists for this Credit Score range",
@@ -290,6 +325,28 @@ class CreditScoreService:
                     "success": False,
                     "message": f"ProcessingFee with ID {fee_id} not found",
                     "status_code": status.HTTP_404_NOT_FOUND,
+                    "data": {}
+                }
+
+            with DBSession() as session:
+                overlapping_entry = (
+                    session.query(ProcessingFee)
+                    .filter(
+                        ProcessingFee.is_deleted == False,
+                        ProcessingFee.id != fee_id,
+                        and_(
+                            ProcessingFee.min_score <= form_data.max_score,
+                            ProcessingFee.max_score >= form_data.min_score
+                        )
+                    )
+                    .first()
+                )
+
+            if overlapping_entry:
+                return {
+                    "success": False,
+                    "message": "Processing fee already exists for this Credit Score range",
+                    "status_code": status.HTTP_400_BAD_REQUEST,
                     "data": {}
                 }
 
