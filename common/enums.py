@@ -64,6 +64,7 @@ class UploadFileType(str, Enum):
     profile_image = "profile_image"
     property_documents = "property_documents"
     income_proof = "income_proof"
+    payment_proof_documents = "payment_proof_documents"
 
 
 class GenderEnum(str, Enum):
