@@ -21,7 +21,7 @@ from db_domains.db import DBSession
 from db_domains.db_interface import DBInterface
 from models.loan import LoanDocument, LoanApplicant, LoanApprovalDetail
 from schemas.loan_schemas import LoanForm, LoanApplicantResponseSchema, UserApprovedLoanForm, InstantCashForm, \
-    LoanConsentForm, LoanDisbursementForm
+    LoanConsentForm, LoanDisbursementForm, LoanAadharVerifiedStatusForm
 
 
 class UserLoanService:
@@ -334,7 +334,8 @@ class UserLoanService:
                         "cheque_number": loan_disbursement_obj.cheque_number,
                         "ifsc_code": loan_disbursement_obj.ifsc_code,
                         "upi_id": loan_disbursement_obj.upi_id,
-                        "transaction_id": loan_disbursement_obj.transaction_id
+                        "transaction_id": loan_disbursement_obj.transaction_id,
+                        "remarks": loan_disbursement_obj.remarks
                     }
                     for loan_disbursement_obj in loan_with_docs.loan_disbursement]
                 loan_response["documents"] = formatted_documents
@@ -649,6 +650,43 @@ class UserLoanService:
 
         except Exception as e:
             app_logger.error(f"[apply_for_disbursement] Failed to update loan consent: {str(e)}")
+            return {
+                "success": False,
+                "message": gettext("something_went_wrong"),
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": {}
+            }
+
+    def update_aadhar_verify_status(self, user_id: int, loan_aadhar_verify_form: LoanAadharVerifiedStatusForm):
+
+        try:
+            app_logger.info(
+                f"[update_aadhar_verify_status] applicant_id: {loan_aadhar_verify_form.applicant_id}"
+            )
+
+            if not self.db_interface.exists_by_id(_id=str(loan_aadhar_verify_form.applicant_id)):
+                return {
+                    "success": False,
+                    "message": "Loan Data not exists.",
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "data": {}
+                }
+
+            loan_data = loan_aadhar_verify_form.model_dump(exclude_unset=True)
+            loan_data['modified_by'] = user_id
+            loan_updated_instance = self.db_interface.update(_id=str(loan_aadhar_verify_form.applicant_id), data=loan_data)
+            app_logger.info(f"{gettext('updated_successfully').format('Loan Aadhar verify status')}: {loan_updated_instance}")
+
+            return {
+                "success": True,
+                "message": gettext("aadhar_status_update_successfully"),
+                "status_code": status.HTTP_200_OK,
+                "data": {
+                }
+            }
+
+        except Exception as e:
+            app_logger.error(f"[update_aadhar_verify_status] Failed to update loan aadhar verify status: {str(e)}")
             return {
                 "success": False,
                 "message": gettext("something_went_wrong"),

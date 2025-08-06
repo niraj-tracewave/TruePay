@@ -34,5 +34,6 @@
     "approved_successfully": "Loan Approved Successfully",
     "instant_cash_fetched_successfully": "EMI for Instant cash calculate successfully.",
     "loan_consent_updated_successfully": "Loan Consent updated successfully.",
-    "loan_disbursement_updated_successfully": "Loan processed for Disbursement successfully."
+    "loan_disbursement_updated_successfully": "Loan processed for Disbursement successfully.",
+    "aadhar_status_update_successfully": "Aadhar status updated successfully."
 }
