@@ -58,6 +58,8 @@ class LoanApplicant(CreateUpdateTime, CreateByUpdateBy):
     documents = relationship("LoanDocument", back_populates="applicant", cascade="all, delete-orphan")
     bank_accounts = relationship("BankAccount", back_populates="applicant", cascade="all, delete-orphan")
     approval_details = relationship("LoanApprovalDetail", back_populates="applicant", cascade="all, delete-orphan", overlaps="approval_details")
+    
+    plans = relationship("Plan", back_populates="applicant", cascade="all, delete-orphan")
 
 
     def __repr__(self):
