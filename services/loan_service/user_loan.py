@@ -181,7 +181,12 @@ class UserLoanService:
             with DBSession() as session:
                 loan_with_docs = (
                     session.query(LoanApplicant)
-                    .options(selectinload(LoanApplicant.documents),  selectinload(LoanApplicant.bank_accounts), selectinload(LoanApplicant.credit_score_range_rate))
+                    .options(selectinload(LoanApplicant.documents),
+                             selectinload(LoanApplicant.bank_accounts),
+                             selectinload(LoanApplicant.credit_score_range_rate),
+                             selectinload(LoanApplicant.loan_disbursement),
+                             selectinload(LoanApplicant.approval_details)
+                             )
                     .filter(LoanApplicant.created_by == user_id, LoanApplicant.is_deleted == False)
                     .all()
                 )
@@ -224,7 +229,21 @@ class UserLoanService:
                             "ifsc_code": bank_account.ifsc_code
                     
                         }
-                    for bank_account in loan.bank_accounts ]
+                    for bank_account in loan.bank_accounts ],
+                    "approval_details" : [
+                    {
+                        "id": approval_detail.id,
+                        "applicant_id": approval_detail.applicant_id,
+                        "user_accepted_amount": approval_detail.user_accepted_amount,
+                        "disbursed_amount": approval_detail.disbursed_amount,
+                        "approved_interest_rate": approval_detail.approved_interest_rate,
+                        "approved_processing_fee": approval_detail.approved_processing_fee,
+                        "approved_tenure_months": approval_detail.approved_tenure_months
+                    }
+                    for approval_detail in loan.approval_details],
+                    "loan_acceptance_agreement_consent" : loan.loan_acceptance_agreement_consent,
+                    "loan_insurance_agreement_consent" : loan.loan_insurance_agreement_consent,
+                    "loan_policy_and_assignment_consent" : loan.loan_policy_and_assignment_consent
                 }
                 loan_list.append(loan_data)
             return {
@@ -510,6 +529,7 @@ class UserLoanService:
             }
 
         except Exception as e:
+            print(str(e))
             app_logger.error(f"[add_user_approved_loan] Failed to approve loan: {str(e)}")
             return {
                 "success": False,

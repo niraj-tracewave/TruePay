@@ -88,7 +88,12 @@ class AdminLoanService(UserLoanService):
 
                 # Fetch matching interest rate info for this loan's type
                 rate_entry = credit_score_range_rate.read_by_fields(
-                    fields=[CreditScoreRangeRate.loan_type == loan.loan_type]
+                    fields=[
+                        CreditScoreRangeRate.loan_type == loan.loan_type,
+                        CreditScoreRangeRate.min_score <= loan_data.get("credit_score"),
+                        CreditScoreRangeRate.max_score >= loan_data.get("credit_score"),
+                        CreditScoreRangeRate.is_deleted == False
+                    ]
                 )
 
                 # Attach rate info if available

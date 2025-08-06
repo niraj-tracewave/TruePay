@@ -1,10 +1,12 @@
 from datetime import datetime
 from typing import Any
 
+from sqlalchemy import and_, or_
 from starlette import status
 
 from app_logging import app_logger
 from db_domains import Base
+from db_domains.db import DBSession
 from db_domains.db_interface import DBInterface
 from models.credit import CreditScoreRangeRate, ProcessingFee
 from schemas.credit_schemas import CombinedLoanConfigCreate, CombinedLoanConfigUpdate, ProcessingFeeCreate, \
@@ -24,16 +26,30 @@ class CreditScoreService:
                 f"[UserID: {user_id}] Checking if combined entry exists for min={form_data.min_score}, "
                 f"max={form_data.max_score}, loan_type={form_data.loan_type}"
             )
-            existing_entry = self.db_interface.read_single_by_fields(
-                fields=[
-                    CreditScoreRangeRate.min_score == form_data.min_score,
-                    CreditScoreRangeRate.max_score == form_data.max_score,
-                    CreditScoreRangeRate.loan_type == form_data.loan_type,
-                    CreditScoreRangeRate.is_deleted == False,
-                ]
-            )
+            with DBSession() as session:
+                overlapping_entry = (
+                    session.query(CreditScoreRangeRate)
+                    .filter(
+                        CreditScoreRangeRate.loan_type == form_data.loan_type,
+                        CreditScoreRangeRate.is_deleted == False,  # if you soft-delete entries
+                        and_(
+                            CreditScoreRangeRate.min_score <= form_data.max_score,
+                            CreditScoreRangeRate.max_score >= form_data.min_score
+                        )
+                    )
+                    .first()
+                )
 
-            if existing_entry:
+            # existing_entry = self.db_interface.read_single_by_fields(
+            #     fields=[
+            #         CreditScoreRangeRate.min_score == form_data.min_score,
+            #         CreditScoreRangeRate.max_score == form_data.max_score,
+            #         CreditScoreRangeRate.loan_type == form_data.loan_type,
+            #         CreditScoreRangeRate.is_deleted == False,
+            #     ]
+            # )
+            #
+            if overlapping_entry:
                 return {
                     "success": False,
                     "message": "Interest Rate already exists for this Credit Score range and Loan Type",
