@@ -77,6 +77,13 @@ class ConsentEnum(str, Enum):
     yes = "Y"
     no = "N"
 
+
+class SubscriptionStatus(str, Enum):
+    CREATED = "created"
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
 class PaymentType(str, Enum):
     BANK_TRANSFER = "BANK_TRANSFER"
     CASH = "CASH"

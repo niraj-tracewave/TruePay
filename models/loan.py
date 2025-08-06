@@ -62,6 +62,8 @@ class LoanApplicant(CreateUpdateTime, CreateByUpdateBy):
     approval_details = relationship("LoanApprovalDetail", back_populates="applicant", cascade="all, delete-orphan", overlaps="approval_details")
     loan_disbursement = relationship("LoanDisbursementDetail", back_populates="applicant", cascade="all, delete-orphan")
 
+    plans = relationship("Plan", back_populates="applicant", cascade="all, delete-orphan")
+
 
     def __repr__(self):
         return f"<LoanApplicant id={self.id} uid={self.loan_uid} name={self.name} status={self.status}>"
