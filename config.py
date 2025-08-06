@@ -34,6 +34,7 @@ class Setting(BaseSettings):
     RAZORPAY_KEY_ID: str
     RAZORPAY_SECRET: str
     GST_CHARGE: str
+    WEBHOOK_SECRET: str
 
     # Default Log type
     LOG_LEVEL: str
@@ -98,6 +99,7 @@ class Config(object):
     RAZORPAY_KEY_ID= app_settings.RAZORPAY_KEY_ID
     RAZORPAY_SECRET=app_settings.RAZORPAY_SECRET
     GST_CHARGE = app_settings.GST_CHARGE
+    WEBHOOK_SECRET = app_settings.WEBHOOK_SECRET
 
 
 class LocalConfig(Config):

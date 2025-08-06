@@ -35,6 +35,9 @@ PUBLIC_PATHS = {
         "/openapi.json",
         "/open-api",
         "/media"
+    ],
+    "razorpay":[
+        "/razorpay/webhook"
     ]
 }
 
@@ -46,7 +49,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         app_logger.info(f"[AuthMiddleware] Request path: {request_path}")
 
         # Combine and normalize all public paths
-        all_public_paths = PUBLIC_PATHS["user"] + PUBLIC_PATHS["admin"] + PUBLIC_PATHS["global"]
+        all_public_paths = PUBLIC_PATHS["user"] + PUBLIC_PATHS["admin"] + PUBLIC_PATHS["global"] +PUBLIC_PATHS["razorpay"]
         regex_patterns = []
 
         for path in all_public_paths:
