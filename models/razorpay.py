@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text, Boolean, JSON
+from common.enums import SubscriptionStatus
+from sqlalchemy import Column, Integer, Enum, String, Float, ForeignKey, DateTime, Text, Boolean, JSON, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from db_domains import CreateUpdateTime, CreateByUpdateBy
@@ -22,6 +23,8 @@ class Plan(CreateUpdateTime, CreateByUpdateBy):
     __tablename__ = "plans"
 
     id = Column(Integer, primary_key=True, index=True)
+    applicant_id = Column(Integer, ForeignKey(
+        "loan_applicants.id"), nullable=False, index=True)
     razorpay_plan_id = Column(String, unique=True, nullable=False)
     entity = Column(String, nullable=True)
     period = Column(String, nullable=False)
@@ -37,16 +40,17 @@ class Plan(CreateUpdateTime, CreateByUpdateBy):
     
 
     subscriptions = relationship("Subscription", back_populates="plan")
+    applicant = relationship("LoanApplicant", back_populates="plans")
 
 
 class Subscription(CreateUpdateTime, CreateByUpdateBy):
     __tablename__ = "subscriptions"
 
     id = Column(Integer, primary_key=True, index=True)
+    status = Column(Enum(SubscriptionStatus), nullable=False)
     razorpay_subscription_id = Column(String, unique=True, nullable=False)
     entity = Column(String, nullable=True)
     # created, active, completed, cancelled
-    status = Column(String, nullable=False)
     plan_id = Column(Integer, ForeignKey("plans.id"))
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
     quantity = Column(Integer, nullable=True)
@@ -65,7 +69,7 @@ class Subscription(CreateUpdateTime, CreateByUpdateBy):
     has_scheduled_changes = Column(Boolean, default=False)
     change_scheduled_at = Column(DateTime, nullable=True)
     upcoming_invoice_id = Column(String, nullable=True)
-    addons = Column(Text, nullable=True)  # JSON string
+    addons = Column(JSON, nullable=True)  # JSON string
     auth_attempts = Column(Integer, nullable=True)
     subscription_data = Column(JSON, nullable=True)
     
