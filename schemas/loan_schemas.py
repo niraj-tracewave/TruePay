@@ -282,3 +282,7 @@ class LoanConsentForm(BaseModel):
 class LoanDisbursementForm(BaseModel):
     applicant_id: int
     available_for_disbursement: bool
+
+class LoanAadharVerifiedStatusForm(BaseModel):
+    applicant_id: int
+    aadhaar_verified: bool
