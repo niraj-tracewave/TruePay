@@ -106,6 +106,46 @@ class LoanApplicantResponseSchema(BaseModel):
     }
 
 
+class LoanApplicantResponseSchemaForAdmin(BaseModel):
+    id: int
+    loan_uid: str
+    name: str
+    email: Optional[str]
+    phone_number: str
+    annual_income: int
+    desired_loan: int
+    date_of_birth: datetime
+    gender: Optional[str]
+    address: Optional[str]
+    company_name: Optional[str]
+    company_address: Optional[str]
+    designation: Optional[str]
+    purpose_of_loan: Optional[str]
+    remarks: Optional[str]
+    status: str
+    created_at: datetime
+    modified_at: datetime
+    is_deleted: bool
+    deleted_at: Optional[datetime]
+    created_by: int
+    modified_by: int
+    loan_type: str
+    approved_loan: Optional[float]
+    credit_score: Optional[str]
+    credit_score_range_rate_id: Optional[int] = 0
+    credit_score_range_rate_percentage: Optional[float] = 0.0
+    custom_rate_percentage: Optional[float] = 0.0
+    processing_fee_id: Optional[int] = 0
+    processing_fee: Optional[float] = 0.0
+    custom_processing_fee: Optional[float] = 0.0
+    tenure_months: Optional[int] = 0
+    available_for_disbursement: Optional[bool] = False
+
+    model_config = {
+        "from_attributes": True
+    }
+
+
 class UpdateLoanForm(LoanForm):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -242,3 +282,7 @@ class LoanConsentForm(BaseModel):
 class LoanDisbursementForm(BaseModel):
     applicant_id: int
     available_for_disbursement: bool
+
+class LoanAadharVerifiedStatusForm(BaseModel):
+    applicant_id: int
+    aadhaar_verified: bool

@@ -13,6 +13,7 @@ from app.admin.admin_credit import router as admin_credit_router
 from app.admin.admin_dashboard import router as admin_dashboard_router
 from app.admin.admin_loan import router as admin_loan_router
 from app.admin.admin_emi_schedule import router as admin_emi_schedule_router
+from app.admin.admin_disbursement import router as admin_loan_disbursement_router
 from app.user.user_auth import router as user_auth_router
 from app.user.user_loan import router as user_loan_router
 from app.user.user_surpass import router as surpass_router
@@ -67,6 +68,7 @@ app.include_router(admin_auth_router)
 app.include_router(admin_loan_router)
 app.include_router(admin_credit_router)
 app.include_router(admin_dashboard_router)
+app.include_router(admin_loan_disbursement_router)
 
 app.include_router(surpass_router)
 app.include_router(razorpay_router)

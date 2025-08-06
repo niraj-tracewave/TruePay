@@ -64,6 +64,7 @@ class UploadFileType(str, Enum):
     profile_image = "profile_image"
     property_documents = "property_documents"
     income_proof = "income_proof"
+    payment_proof_documents = "payment_proof_documents"
 
 
 class GenderEnum(str, Enum):
@@ -82,3 +83,9 @@ class SubscriptionStatus(str, Enum):
     ACTIVE = "active"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
+
+class PaymentType(str, Enum):
+    BANK_TRANSFER = "BANK_TRANSFER"
+    CASH = "CASH"
+    CHEQUE = "CHEQUE"
+    UPI = "UPI"

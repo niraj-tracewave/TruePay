@@ -21,7 +21,7 @@ from db_domains.db import DBSession
 from db_domains.db_interface import DBInterface
 from models.loan import LoanDocument, LoanApplicant, LoanApprovalDetail
 from schemas.loan_schemas import LoanForm, LoanApplicantResponseSchema, UserApprovedLoanForm, InstantCashForm, \
-    LoanConsentForm, LoanDisbursementForm
+    LoanConsentForm, LoanDisbursementForm, LoanAadharVerifiedStatusForm
 
 
 class UserLoanService:
@@ -68,6 +68,8 @@ class UserLoanService:
                 "credit_score": loan_application_form.credit_score if loan_application_form.credit_score else 0,
                 "created_by": user_id,
                 "modified_by": user_id,
+                "pan_verified": loan_application_form.pan_verified,
+                "aadhaar_verified": loan_application_form.aadhaar_verified,
             }
 
             # Save loan applicant to DB
@@ -200,6 +202,9 @@ class UserLoanService:
                     "desired_loan": loan.desired_loan,
                     "annual_income": loan.annual_income,
                     "purpose_of_loan": loan.purpose_of_loan,
+                    "aadhaar_verified": loan.aadhaar_verified,
+                    "pan_verified": loan.pan_verified,
+                    "available_for_disbursement": loan.available_for_disbursement,
                     "documents": [
                         {
                             "id": doc.id,
@@ -261,6 +266,7 @@ class UserLoanService:
                         selectinload(LoanApplicant.bank_accounts),
                         selectinload(LoanApplicant.approval_details),
                         selectinload(LoanApplicant.credit_score_range_rate),
+                        selectinload(LoanApplicant.loan_disbursement),
                         with_loader_criteria(LoanDocument, LoanDocument.is_deleted == False)
                     )
                     .filter(*filters)
@@ -281,6 +287,14 @@ class UserLoanService:
                 loan_response["tenure_months_steps"]=6
                 loan_response["effective_interest_rate"] = self.get_effective_rate(loan_with_docs)
                 formatted_documents = format_loan_documents(loan_with_docs.documents) if loan_with_docs else []
+                loan_response["loan_acceptance_agreement_consent"] = loan_with_docs.loan_acceptance_agreement_consent
+                loan_response["loan_insurance_agreement_consent"] = loan_with_docs.loan_insurance_agreement_consent
+                loan_response["loan_policy_and_assignment_consent"] = loan_with_docs.loan_policy_and_assignment_consent
+                loan_response["available_for_disbursement"] = loan_with_docs.available_for_disbursement
+                loan_response["disbursement_apply_date"] = loan_with_docs.disbursement_apply_date
+                loan_response["is_disbursement_manual"] = loan_with_docs.is_disbursement_manual
+                loan_response["pan_verified"] = loan_with_docs.pan_verified
+                loan_response["aadhaar_verified"] = loan_with_docs.aadhaar_verified
 
                 loan_response["approval_details"] = [
                     {
@@ -304,6 +318,26 @@ class UserLoanService:
                             "ifsc_code": bank_account.ifsc_code
                         }
                     for bank_account in loan_with_docs.bank_accounts ]
+                loan_response["documents"] = formatted_documents
+
+                loan_response["loan_disbursement"] = [
+                    {
+                        "id": loan_disbursement_obj.id,
+                        "applicant_id": loan_disbursement_obj.applicant_id,
+                        "payment_date": loan_disbursement_obj.payment_date,
+                        "transferred_amount": loan_disbursement_obj.transferred_amount,
+                        "payment_type": loan_disbursement_obj.payment_type,
+                        "bank_name": loan_disbursement_obj.bank_name,
+                        "account_number": loan_disbursement_obj.account_number,
+                        "account_holder_name": loan_disbursement_obj.account_holder_name,
+                        "payment_file": loan_disbursement_obj.payment_file,
+                        "cheque_number": loan_disbursement_obj.cheque_number,
+                        "ifsc_code": loan_disbursement_obj.ifsc_code,
+                        "upi_id": loan_disbursement_obj.upi_id,
+                        "transaction_id": loan_disbursement_obj.transaction_id,
+                        "remarks": loan_disbursement_obj.remarks
+                    }
+                    for loan_disbursement_obj in loan_with_docs.loan_disbursement]
                 loan_response["documents"] = formatted_documents
 
                 effective_processing_fee = self.get_effective_processing_fee(loan_with_docs)
@@ -331,7 +365,7 @@ class UserLoanService:
                     loan_response["processing_fee_charge"] = processing_fee
                     loan_response["other_charges"] = other_charges
 
-                elif loan_with_docs.approved_loan and loan_with_docs.status == "USER_ACCEPTED":
+                elif loan_with_docs.approved_loan and loan_with_docs.status in ["USER_ACCEPTED", "DISBURSED"]:
                     user_filter = [
                         LoanApprovalDetail.applicant_id == loan_application_id
                     ]
@@ -616,6 +650,43 @@ class UserLoanService:
 
         except Exception as e:
             app_logger.error(f"[apply_for_disbursement] Failed to update loan consent: {str(e)}")
+            return {
+                "success": False,
+                "message": gettext("something_went_wrong"),
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": {}
+            }
+
+    def update_aadhar_verify_status(self, user_id: int, loan_aadhar_verify_form: LoanAadharVerifiedStatusForm):
+
+        try:
+            app_logger.info(
+                f"[update_aadhar_verify_status] applicant_id: {loan_aadhar_verify_form.applicant_id}"
+            )
+
+            if not self.db_interface.exists_by_id(_id=str(loan_aadhar_verify_form.applicant_id)):
+                return {
+                    "success": False,
+                    "message": "Loan Data not exists.",
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "data": {}
+                }
+
+            loan_data = loan_aadhar_verify_form.model_dump(exclude_unset=True)
+            loan_data['modified_by'] = user_id
+            loan_updated_instance = self.db_interface.update(_id=str(loan_aadhar_verify_form.applicant_id), data=loan_data)
+            app_logger.info(f"{gettext('updated_successfully').format('Loan Aadhar verify status')}: {loan_updated_instance}")
+
+            return {
+                "success": True,
+                "message": gettext("aadhar_status_update_successfully"),
+                "status_code": status.HTTP_200_OK,
+                "data": {
+                }
+            }
+
+        except Exception as e:
+            app_logger.error(f"[update_aadhar_verify_status] Failed to update loan aadhar verify status: {str(e)}")
             return {
                 "success": False,
                 "message": gettext("something_went_wrong"),

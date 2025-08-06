@@ -6,7 +6,8 @@ from starlette import status
 from common.enums import UploadFileType
 from common.response import ApiResponse
 from models.loan import LoanApplicant
-from schemas.loan_schemas import LoanForm, UserApprovedLoanForm, InstantCashForm, LoanConsentForm, LoanDisbursementForm
+from schemas.loan_schemas import LoanForm, UserApprovedLoanForm, InstantCashForm, LoanConsentForm, LoanDisbursementForm, \
+    LoanAadharVerifiedStatusForm
 from services.loan_service.user_loan import UserLoanService
 
 router = APIRouter(prefix="/loan", tags=["User Panel Loan API's"])
@@ -108,6 +109,19 @@ def proceed_for_disbursement(request: Request, form_data: LoanDisbursementForm):
     user_state = getattr(request.state, "user", None)
 
     response = loan_service.apply_for_disbursement(user_id=user_state.get("id"), loan_disbursement_form=form_data)
+    return ApiResponse.create_response(
+        success=response.get("success"),
+        message=response.get("message"),
+        status_code=response.get("status_code", status.HTTP_200_OK),
+        data=response.get("data")
+    )
+
+
+@router.post("/update-aadhar-verify-status", summary="Update Aadhar Verify Status")
+def update_aadhar_verify_status(request: Request, form_data: LoanAadharVerifiedStatusForm):
+    user_state = getattr(request.state, "user", None)
+
+    response = loan_service.update_aadhar_verify_status(user_id=user_state.get("id"), loan_aadhar_verify_form=form_data)
     return ApiResponse.create_response(
         success=response.get("success"),
         message=response.get("message"),

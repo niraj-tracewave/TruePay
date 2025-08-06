@@ -7,7 +7,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from common.enums import IncomeProofType, DocumentType, DocumentStatus, LoanType, LoanStatus, GenderEnum
+from common.enums import IncomeProofType, DocumentType, DocumentStatus, LoanType, LoanStatus, GenderEnum, PaymentType
 from db_domains import CreateUpdateTime, CreateByUpdateBy
 
 
@@ -53,12 +53,15 @@ class LoanApplicant(CreateUpdateTime, CreateByUpdateBy):
     available_for_disbursement = Column(Boolean, default=False)
     disbursement_apply_date = Column(DateTime, nullable=True)
     is_disbursement_manual = Column(Boolean, default=False)
+    pan_verified = Column(Boolean, default=False)
+    aadhaar_verified = Column(Boolean, default=False)
 
     credit_score_range_rate = relationship("CreditScoreRangeRate")
     documents = relationship("LoanDocument", back_populates="applicant", cascade="all, delete-orphan")
     bank_accounts = relationship("BankAccount", back_populates="applicant", cascade="all, delete-orphan")
     approval_details = relationship("LoanApprovalDetail", back_populates="applicant", cascade="all, delete-orphan", overlaps="approval_details")
-    
+        loan_disbursement = relationship("LoanDisbursementDetail", back_populates="applicant", cascade="all, delete-orphan")
+
     plans = relationship("Plan", back_populates="applicant", cascade="all, delete-orphan")
 
 
@@ -189,3 +192,26 @@ class EmiScheduleDate(CreateUpdateTime, CreateByUpdateBy):
 
     emi_schedule_loan_type = Column(Enum(LoanType), nullable=False)
     emi_schedule_date = Column(Date, nullable=False)
+
+
+class LoanDisbursementDetail(CreateUpdateTime, CreateByUpdateBy):
+    __tablename__ = "loan_disbursement_detail"
+    id = Column(Integer, primary_key=True, index=True)
+
+    applicant_id = Column(Integer, ForeignKey("loan_applicants.id"), index=True)
+    payment_type = Column(
+        Enum(PaymentType), nullable=False
+    )
+    payment_date = Column(DateTime, nullable=False)
+    transferred_amount = Column(Float, nullable=False)
+    remarks = Column(String(500), nullable=True)
+    bank_name = Column(String, nullable=True)
+    account_holder_name = Column(String, nullable=True)
+    account_number = Column(String, nullable=True)
+    ifsc_code = Column(String, nullable=True)
+    payment_file = Column(String(500), nullable=True)
+    cheque_number = Column(String, nullable=True)
+    upi_id = Column(String, nullable=True)
+    transaction_id = Column(String, nullable=True)
+
+    applicant = relationship("LoanApplicant", back_populates="loan_disbursement")

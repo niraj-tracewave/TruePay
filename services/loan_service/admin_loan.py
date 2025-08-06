@@ -9,7 +9,7 @@ from common.enums import DocumentType, IncomeProofType, LoanType
 from db_domains.db_interface import DBInterface
 from models.credit import CreditScoreRangeRate
 from models.loan import LoanDocument, LoanApplicant
-from schemas.loan_schemas import LoanApplicantResponseSchema, UpdateLoanForm
+from schemas.loan_schemas import LoanApplicantResponseSchema, UpdateLoanForm, LoanApplicantResponseSchemaForAdmin
 from services.loan_service.user_loan import UserLoanService
 
 
@@ -372,8 +372,10 @@ class AdminLoanService(UserLoanService):
             loan_list = []
             credit_score_range_rate = DBInterface(CreditScoreRangeRate)
             for loan in loans:
-                loan_data = LoanApplicantResponseSchema.model_validate(loan).model_dump(exclude={"documents"})
+                loan_data = LoanApplicantResponseSchemaForAdmin.model_validate(loan).model_dump(exclude={"documents"})
 
+                if loan_data.get("status") == "USER_ACCEPTED" and not loan_data.get("available_for_disbursement"):
+                    continue
                 # Fetch matching interest rate info for this loan's type
                 rate_entry = credit_score_range_rate.read_by_fields(
                     fields=[CreditScoreRangeRate.loan_type == loan.loan_type]
