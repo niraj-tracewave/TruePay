@@ -56,6 +56,7 @@ app.add_middleware(
 )
 
 MEDIA_DIR = os.path.abspath("media")
+os.makedirs(MEDIA_DIR, exist_ok=True)
 
 app.mount("/media", StaticFiles(directory=MEDIA_DIR), name="media")
 
