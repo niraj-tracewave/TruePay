@@ -53,6 +53,8 @@ class LoanApplicant(CreateUpdateTime, CreateByUpdateBy):
     available_for_disbursement = Column(Boolean, default=False)
     disbursement_apply_date = Column(DateTime, nullable=True)
     is_disbursement_manual = Column(Boolean, default=False)
+    pan_verified = Column(Boolean, default=False)
+    aadhaar_verified = Column(Boolean, default=False)
 
     credit_score_range_rate = relationship("CreditScoreRangeRate")
     documents = relationship("LoanDocument", back_populates="applicant", cascade="all, delete-orphan")
