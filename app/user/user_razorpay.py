@@ -218,7 +218,9 @@ def create_emi_mandate(
                 "success": False,
                 "message": "An error occurred while creating plan or subscription",
                 "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "data": {}
+                "data": {
+                    "error": str(e)
+                }
             }
 
 @router.post("/create-emi-plan")
@@ -231,5 +233,9 @@ def create_emi_plan(payload: CreatePlanSchema, service: RazorpayService = Depend
 @router.post("/create-subscription")
 def create_subscription(payload: CreateSubscriptionSchema, service: RazorpayService = Depends(get_razorpay_service)):
     subscription_data = payload.dict(exclude_none=True)
+    if 'callback_url' in subscription_data:
+        callback_url = "https://api.razorpay.com/"
+        subscription_data['notes'] = subscription_data.get('notes', {})
+        subscription_data['notes']['callback_url'] = str(callback_url)
     subscription = service.create_subscription(subscription_data)
     return {"subscription": subscription}
