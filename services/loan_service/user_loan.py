@@ -5,6 +5,7 @@ from typing import Dict, Any, List, Optional
 from zoneinfo import ZoneInfo
 
 from fastapi import UploadFile, BackgroundTasks
+from sqlalchemy import asc, desc
 from sqlalchemy.orm import selectinload, with_loader_criteria
 from starlette import status
 
@@ -23,7 +24,6 @@ from models.loan import LoanDocument, LoanApplicant, LoanApprovalDetail
 from models.razorpay import Plan
 from schemas.loan_schemas import LoanForm, LoanApplicantResponseSchema, UserApprovedLoanForm, InstantCashForm, \
     LoanConsentForm, LoanDisbursementForm, LoanAadharVerifiedStatusForm
-
 
 class UserLoanService:
     def __init__(self, db_model: type[Base]) -> None:
@@ -176,10 +176,15 @@ class UserLoanService:
                 "data": {}
             }
 
-    def get_loan_applications(self, user_id: str) -> Dict[str, Any]:
+    def get_loan_applications(self, user_id: str, order_by: Optional[str] = "id", order_dir: Optional[str] = "desc") -> Dict[str, Any]:
         try:
             app_logger.info(f"Fetching all loan applications for user: {user_id}")
             with DBSession() as session:
+                order_column = {
+                    "id": LoanApplicant.id,
+                    "created_at": LoanApplicant.created_at
+                }.get(order_by, LoanApplicant.id)  # fallback to id if unknown column
+                order_func = asc if order_dir == "asc" else desc
                 loan_with_docs = (
                     session.query(LoanApplicant)
                     .options(selectinload(LoanApplicant.documents),
@@ -190,6 +195,7 @@ class UserLoanService:
                              selectinload(LoanApplicant.approval_details)
                              )
                     .filter(LoanApplicant.created_by == user_id, LoanApplicant.is_deleted == False)
+                    .order_by(order_func(order_column))
                     .all()
                 )
             loan_list = []

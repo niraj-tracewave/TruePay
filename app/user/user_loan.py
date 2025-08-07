@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Request, Form, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, Request, Form, UploadFile, File, BackgroundTasks, Query
 from starlette import status
 
 from common.enums import UploadFileType
@@ -28,9 +28,13 @@ def add_loan_application(request: Request, form_data: LoanForm, background_tasks
 
 
 @router.get("/get-loan-application", summary="Get All Loan Application")
-def get_all_loan_applications(request: Request):
+def get_all_loan_applications(
+    request: Request, 
+    order_by: str = Query("id", enum=["id", "created_at"]),
+    order_dir: str = Query("desc", enum=["asc", "desc"])):
     user_state = getattr(request.state, "user", None)
-    response = loan_service.get_loan_applications(user_id=user_state.get("id"))
+    response = loan_service.get_loan_applications(user_id=user_state.get("id"),  order_by=order_by,
+        order_dir=order_dir)
 
     return ApiResponse.create_response(
         success=response.get("success"),
