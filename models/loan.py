@@ -3,7 +3,7 @@ import re
 import string
 
 from sqlalchemy import (
-    Column, Integer, String, Float, Date, Enum, ForeignKey, UniqueConstraint, Boolean, DateTime
+    Column, Integer, String, Float, Date, Enum, ForeignKey, UniqueConstraint, Boolean, DateTime,Text
 )
 from sqlalchemy.orm import relationship
 
@@ -109,7 +109,7 @@ class LoanDocument(CreateUpdateTime, CreateByUpdateBy):
     proof_type = Column(Enum(IncomeProofType), nullable=True, index=True)
     document_type = Column(Enum(DocumentType), nullable=False, index=True)
     document_number = Column(String(100), nullable=True, index=True)
-    document_file = Column(String(255), nullable=True)
+    document_file = Column(Text, nullable=True)
     remarks = Column(String(500), nullable=True)
     status = Column(
         Enum(DocumentStatus), default=DocumentStatus.PENDING, server_default=DocumentStatus.PENDING.value,
