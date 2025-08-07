@@ -242,5 +242,20 @@ def create_subscription(payload: CreateSubscriptionSchema, service: RazorpayServ
 
 @router.get("/get-subscription/{subscription_id}")
 def get_subscription(subscription_id: str, service: RazorpayService = Depends(get_razorpay_service)):
-    subscription = service.fetch_subscription(subscription_id)
-    return {"subscription": subscription}
+    try:
+        subscription = service.fetch_subscription(subscription_id)
+        return {
+                "success": True,
+                "message": "Subscription Details Fetched Successfully!",
+                "status_code": status.HTTP_200_OK,
+                "data":  {"subscription": subscription}
+            }
+    except Exception as e:
+        return {
+                "success": False,
+                "message": "Internal Server Error",
+                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "data": {
+                    "error": str(e)
+                }
+            }
