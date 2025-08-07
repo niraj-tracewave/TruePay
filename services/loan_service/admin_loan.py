@@ -6,7 +6,9 @@ from starlette import status
 from app_logging import app_logger
 from common.cache_string import gettext
 from common.enums import DocumentType, IncomeProofType, LoanType
+from db_domains.db import DBSession
 from db_domains.db_interface import DBInterface
+from models.razorpay import Plan, Subscription
 from models.credit import CreditScoreRangeRate
 from models.loan import LoanDocument, LoanApplicant
 from schemas.loan_schemas import LoanApplicantResponseSchema, UpdateLoanForm, LoanApplicantResponseSchemaForAdmin
@@ -72,13 +74,17 @@ class AdminLoanService(UserLoanService):
                 final_offset = (offset - 1) * limit
             else:
                 final_offset = offset
-
-            loans = self.db_interface.read_all_by_filters(
+          
+            loans = self.db_interface.read_all_by_filters_with_joins(
                 filter_expr=filter_expr,
                 order_by=order_column,
                 order_direction=order_direction,
                 limit=limit,
-                offset=final_offset
+                offset=final_offset,
+                join_model=Plan,
+                join_on_left="id",
+                join_on_right="applicant_id",
+                relationship_name="plans"
             )
 
             loan_list = []
@@ -107,6 +113,22 @@ class AdminLoanService(UserLoanService):
                     loan_data["credit_score_rate_info"] = credit_score_rate_info
                 else:
                     loan_data["credit_score_rate_info"] = {}
+                    
+                plan_data = []
+                for plan in loan.plans:  
+                    with DBSession() as session:
+                        subscriptions = (
+                            session.query(Subscription)
+    
+                            .filter(Subscription.plan_id == plan.id, Subscription.is_deleted == False)
+                            .all()
+                        )
+                    for subscription in subscriptions: 
+                        plan.plan_data.setdefault("subscriptions", []).append(subscription.subscription_data)
+
+                    plan_data.append(plan.plan_data)
+
+                loan_data["plans"] = plan_data
 
                 loan_list.append(loan_data)
 

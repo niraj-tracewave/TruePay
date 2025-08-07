@@ -84,6 +84,26 @@ def format_loan_documents(documents: list) -> list[dict]:
     return formatted_docs
 
 
+def format_plan_and_subscriptions(plans: list) -> list[dict]:
+    formatted_data = []
+
+    for plan in plans:
+        subscriptions_data = []
+        for sub in plan.subscriptions:
+            subscriptions_data.append({
+                "subscription_id": sub.id,
+                "razorpay_subscription_id": sub.razorpay_subscription_id,
+                "status": sub.status,
+            })
+
+        formatted_data.append({
+            "plan_id": plan.id,
+            "razorpay_plan_id": plan.razorpay_plan_id,
+            "subscriptions": subscriptions_data,
+        })
+
+    return formatted_data
+
 class PasswordHashing:
     def __init__(self):
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

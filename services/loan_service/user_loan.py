@@ -14,12 +14,13 @@ from common.common_services.aws_services import AWSClient
 from common.common_services.email_service import EmailService
 from common.email_html_utils import build_loan_email_bodies
 from common.enums import DocumentType, IncomeProofType, LoanType, UploadFileType, LoanStatus
-from common.utils import format_loan_documents, validate_file_type, calculate_emi_schedule
+from common.utils import format_loan_documents, validate_file_type, calculate_emi_schedule, format_plan_and_subscriptions
 from config import app_config
 from db_domains import Base
 from db_domains.db import DBSession
 from db_domains.db_interface import DBInterface
 from models.loan import LoanDocument, LoanApplicant, LoanApprovalDetail
+from models.razorpay import Plan
 from schemas.loan_schemas import LoanForm, LoanApplicantResponseSchema, UserApprovedLoanForm, InstantCashForm, \
     LoanConsentForm, LoanDisbursementForm, LoanAadharVerifiedStatusForm
 
@@ -185,6 +186,7 @@ class UserLoanService:
                              selectinload(LoanApplicant.bank_accounts),
                              selectinload(LoanApplicant.credit_score_range_rate),
                              selectinload(LoanApplicant.loan_disbursement),
+                             selectinload(LoanApplicant.plans).selectinload(Plan.subscriptions),
                              selectinload(LoanApplicant.approval_details)
                              )
                     .filter(LoanApplicant.created_by == user_id, LoanApplicant.is_deleted == False)
@@ -192,6 +194,7 @@ class UserLoanService:
                 )
             loan_list = []
             for loan in loan_with_docs:
+                plan_data = format_plan_and_subscriptions(loan.plans)
                 loan_data = {
                     "id": loan.id,
                     "loan_uid": loan.loan_uid,
@@ -210,6 +213,7 @@ class UserLoanService:
                     "aadhaar_verified": loan.aadhaar_verified,
                     "pan_verified": loan.pan_verified,
                     "available_for_disbursement": loan.available_for_disbursement,
+                    "plan_details": plan_data,
                     "documents": [
                         {
                             "id": doc.id,
@@ -286,6 +290,7 @@ class UserLoanService:
                         selectinload(LoanApplicant.approval_details),
                         selectinload(LoanApplicant.credit_score_range_rate),
                         selectinload(LoanApplicant.loan_disbursement),
+                        selectinload(LoanApplicant.plans).selectinload(Plan.subscriptions),
                         with_loader_criteria(LoanDocument, LoanDocument.is_deleted == False)
                     )
                     .filter(*filters)
@@ -299,6 +304,7 @@ class UserLoanService:
                         "status_code": status.HTTP_404_NOT_FOUND,
                         "data": {}
                     }
+                plan_data = format_plan_and_subscriptions(loan_with_docs.plans)
                 loan_response = LoanApplicantResponseSchema.model_validate(loan_with_docs).model_dump()
                 loan_response["min_loan_amount"]=100
                 loan_response["min_tenure_months"]=12
@@ -314,6 +320,7 @@ class UserLoanService:
                 loan_response["is_disbursement_manual"] = loan_with_docs.is_disbursement_manual
                 loan_response["pan_verified"] = loan_with_docs.pan_verified
                 loan_response["aadhaar_verified"] = loan_with_docs.aadhaar_verified
+                loan_response["plan_details"] = plan_data
 
                 loan_response["approval_details"] = [
                     {
