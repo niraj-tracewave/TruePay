@@ -239,3 +239,8 @@ def create_subscription(payload: CreateSubscriptionSchema, service: RazorpayServ
         subscription_data['notes']['callback_url'] = str(callback_url)
     subscription = service.create_subscription(subscription_data)
     return {"subscription": subscription}
+
+@router.get("/get-subscription/{subscription_id}")
+def get_subscription(subscription_id: str, service: RazorpayService = Depends(get_razorpay_service)):
+    subscription = service.fetch_subscription(subscription_id)
+    return {"subscription": subscription}
