@@ -138,9 +138,10 @@ class AdminLoanService(UserLoanService):
                     "no_module_found"
                 ).format("Loan Application"),
                 "status_code": status.HTTP_200_OK if loan_list else status.HTTP_404_NOT_FOUND,
-                "data": {
+                 "data": {
                     "loan_applications": loan_list,
-                    "total_count": total_loans
+                    "total_db_loans": total_loans,
+                    "total_count": len(loan_list)
                 }
             }
 
@@ -430,7 +431,8 @@ class AdminLoanService(UserLoanService):
                 "status_code": status.HTTP_200_OK if loan_list else status.HTTP_404_NOT_FOUND,
                 "data": {
                     "loan_applications": loan_list,
-                    "total_count": total_loans
+                    "total_db_loans": total_loans,
+                    "total_count": len(loan_list)
                 }
             }
 
