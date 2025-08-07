@@ -141,7 +141,7 @@ class AdminLoanService(UserLoanService):
                  "data": {
                     "loan_applications": loan_list,
                     "total_db_loans": total_loans,
-                    "total_count": len(loan_list)
+                    "total_count":total_loans
                 }
             }
 
@@ -432,7 +432,7 @@ class AdminLoanService(UserLoanService):
                 "data": {
                     "loan_applications": loan_list,
                     "total_db_loans": total_loans,
-                    "total_count": len(loan_list)
+                    "total_count": total_loans
                 }
             }
 
