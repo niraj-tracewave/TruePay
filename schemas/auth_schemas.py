@@ -4,7 +4,7 @@ from typing import Optional
 
 from pydantic import BaseModel, EmailStr, constr, model_validator
 
-from common.enums import UserRole
+from common.enums import UserRole, GenderEnum
 
 
 class LoginRequest(BaseModel):
@@ -78,7 +78,7 @@ class AddUserRequest(BaseModel):
     aadhaar_number: constr(min_length=12, max_length=12)
     pan_file: Optional[str] = None
     aadhaar_file: Optional[str] = None
-    gender: str
+    gender: GenderEnum
 
     @model_validator(mode="after")
     def check_files_required_if_numbers_provided(cls, values):
@@ -128,6 +128,7 @@ class UserUpdateData(BaseModel):
     aadhaar_file: Optional[str] = None
     is_deleted: Optional[bool] = None
     is_active: Optional[bool] = None
+    gender: GenderEnum
 
     @model_validator(mode="after")
     def check_files_required_if_numbers_provided(cls, values):
