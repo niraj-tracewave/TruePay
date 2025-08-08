@@ -15,7 +15,8 @@ from common.common_services.aws_services import AWSClient
 from common.common_services.email_service import EmailService
 from common.email_html_utils import build_loan_email_bodies
 from common.enums import DocumentType, IncomeProofType, LoanType, UploadFileType, LoanStatus
-from common.utils import format_loan_documents, validate_file_type, calculate_emi_schedule, format_plan_and_subscriptions
+from common.utils import (calculate_emi_schedule, format_loan_documents,
+    format_plan_and_subscriptions, unix_to_yyyy_mm_dd, validate_file_type, get_latest_paid_at)
 from config import app_config
 from db_domains import Base
 from db_domains.db import DBSession
@@ -24,6 +25,9 @@ from models.loan import LoanDocument, LoanApplicant, LoanApprovalDetail
 from models.razorpay import Plan
 from schemas.loan_schemas import LoanForm, LoanApplicantResponseSchema, UserApprovedLoanForm, InstantCashForm, \
     LoanConsentForm, LoanDisbursementForm, LoanAadharVerifiedStatusForm
+from services.razorpay_service import RazorpayService
+razorpay_service_obj = RazorpayService(
+                app_config.RAZORPAY_KEY_ID, app_config.RAZORPAY_SECRET)
 
 class UserLoanService:
     def __init__(self, db_model: type[Base]) -> None:
@@ -327,7 +331,36 @@ class UserLoanService:
                 loan_response["pan_verified"] = loan_with_docs.pan_verified
                 loan_response["aadhaar_verified"] = loan_with_docs.aadhaar_verified
                 loan_response["plan_details"] = plan_data
+                #NOTE: Fetch Subscription Details and Proceed with The start date and End Date details for "Consumer durable loan Details" Page
+                loan_response["e_mandate_payment_track"] = {}
+                razorpay_sub_id = None
+                razorpay_sub_detail = None
+                razorpay_sub_invoice_detail = None
 
+                if plan_data and isinstance(plan_data, list) and len(plan_data) > 0 and "subscriptions" in plan_data[0]:
+                    subs = plan_data[0].get("subscriptions")
+                    if subs and len(subs) > 0:
+                        razorpay_sub_id = subs[0].get("razorpay_subscription_id")
+
+                if razorpay_sub_id:
+                    razorpay_sub_detail = razorpay_service_obj.fetch_subscription(subscription_id=razorpay_sub_id)
+                    razorpay_sub_invoice_detail = razorpay_service_obj.fetch_invoices_for_subscription(subscription_id=razorpay_sub_id)
+
+                if razorpay_sub_detail:
+                    try:
+                        loan_response["e_mandate_payment_track"] = {
+                            "start_at": unix_to_yyyy_mm_dd(razorpay_sub_detail.get("start_at")),
+                            "end_at": unix_to_yyyy_mm_dd(razorpay_sub_detail.get("end_at")),
+                            "charge_at": unix_to_yyyy_mm_dd(razorpay_sub_detail.get("charge_at")),
+                            "auth_attempts": razorpay_sub_detail.get("auth_attempts"),
+                            "paid_count": razorpay_sub_detail.get("paid_count"),
+                            "total_count": razorpay_sub_detail.get("total_count"),
+                            "remaining_count": razorpay_sub_detail.get("remaining_count"),
+                            "latest_paid_at": unix_to_yyyy_mm_dd(get_latest_paid_at(razorpay_sub_invoice_detail)) if razorpay_sub_invoice_detail else None,
+                        }
+                    except Exception as e:
+                        print(f"Error processing e_mandate_payment_track: {e}")
+                        loan_response["e_mandate_payment_track"] = {}
                 loan_response["approval_details"] = [
                     {
                         "id": approval_detail.id,

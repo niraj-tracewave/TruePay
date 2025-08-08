@@ -274,3 +274,23 @@ def calculate_emi_schedule(
             "status_code": status.HTTP_400_BAD_REQUEST,
             "data": {},
         }
+
+def unix_to_yyyy_mm_dd(unix_timestamp: int) -> Optional[str]:
+    try:
+        dt = datetime.fromtimestamp(unix_timestamp)  # local timezone
+        return dt.strftime("%Y-%m-%d")
+    except Exception as e:
+        # Optional: log the exception here if needed
+        return None
+    
+def get_latest_paid_at(razorpay_sub_invoice_detail: dict) -> int | None:
+    items = razorpay_sub_invoice_detail.get("items", [])
+    # Filter invoices that have a non-null 'paid_at'
+    paid_invoices = [inv for inv in items if inv.get("paid_at") is not None]
+    
+    if not paid_invoices:
+        return None  # No invoices have been paid
+    
+    # Find the invoice with the max 'paid_at' timestamp
+    latest_invoice = max(paid_invoices, key=lambda x: x["paid_at"])
+    return latest_invoice["paid_at"]

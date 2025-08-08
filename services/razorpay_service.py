@@ -100,3 +100,16 @@ class RazorpayService:
             return True
         except razorpay.errors.SignatureVerificationError:
             return False
+
+    def fetch_invoices_for_subscription(self, subscription_id: str, count: int = 10, skip: int = 0) -> Dict:
+        """
+        Fetch all invoices for a given subscription.
+        :param subscription_id: The Razorpay subscription ID.
+        :param count: Number of invoices to fetch (max 100).
+        :param skip: Number of invoices to skip (for pagination).
+        """
+        return self.client.invoice.all({
+            "subscription_id": subscription_id,
+            "count": count,
+            "skip": skip
+        })
