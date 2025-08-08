@@ -1,7 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, List
 
-
 class PlanItem(BaseModel):
     name: str
     amount: int  # in paise

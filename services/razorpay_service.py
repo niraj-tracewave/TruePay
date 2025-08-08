@@ -1,6 +1,6 @@
 import razorpay
-from typing import Optional, Dict
-
+from typing import  Dict
+from datetime import datetime
 
 class RazorpayService:
     def __init__(self, key_id: str, key_secret: str):
@@ -36,6 +36,18 @@ class RazorpayService:
             }
         """
         return self.client.plan.create(plan_data)
+    # Function to calculate the Unix timestamp for the 5th of the next month
+    
+    def get_next_month_fifth_timestamp(self):
+        # Get current date
+        today = datetime.now()
+        # Calculate next month
+        next_month = today.month % 12 + 1
+        year = today.year if next_month != 1 else today.year + 1
+        # Set to the 5th of the next month
+        next_month_date = datetime(year, next_month, 5)
+        # Convert to Unix timestamp (seconds since epoch)
+        return int(next_month_date.timestamp())
 
     def create_subscription(self, subscription_data: Dict) -> Dict:
         """
@@ -63,6 +75,8 @@ class RazorpayService:
             }
             }
         """
+        breakpoint()
+        subscription_data["start_at"]= self.get_next_month_fifth_timestamp()
         return self.client.subscription.create(subscription_data)
 
     def fetch_subscription(self, subscription_id: str) -> Dict:

@@ -110,6 +110,7 @@ def update_loan_consent(request: Request, form_data: LoanConsentForm):
 
 @router.post("/loan-proceed-for-disbursement", summary="Approve Loan for Disbursement")
 def proceed_for_disbursement(request: Request, form_data: LoanDisbursementForm):
+    #NOTE: Modified The Subscription Status Based On Subscription Details
     user_state = getattr(request.state, "user", None)
 
     response = loan_service.apply_for_disbursement(user_id=user_state.get("id"), loan_disbursement_form=form_data)

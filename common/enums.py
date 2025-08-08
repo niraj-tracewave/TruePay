@@ -83,6 +83,7 @@ class SubscriptionStatus(str, Enum):
     ACTIVE = "active"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
+    AUTHENTICATED = "authenticated"
 
 class PaymentType(str, Enum):
     BANK_TRANSFER = "BANK_TRANSFER"

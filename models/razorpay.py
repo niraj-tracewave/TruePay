@@ -1,5 +1,5 @@
 from common.enums import SubscriptionStatus
-from sqlalchemy import Column, Integer, Enum, String, Float, ForeignKey, DateTime, Text, Boolean, JSON, UniqueConstraint
+from sqlalchemy import Column, Integer, Enum, String, Float, ForeignKey, DateTime, Text, Boolean, JSON, BigInteger
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from db_domains import CreateUpdateTime, CreateByUpdateBy
@@ -57,10 +57,10 @@ class Subscription(CreateUpdateTime, CreateByUpdateBy):
     total_count = Column(Integer, nullable=True)
     paid_count = Column(Integer, nullable=True)
     remaining_count = Column(Integer, nullable=True)
-    start_at = Column(DateTime, nullable=True)
-    end_at = Column(DateTime, nullable=True)
-    charge_at = Column(DateTime, nullable=True)
-    expire_by = Column(DateTime, nullable=True)
+    start_at = Column(BigInteger, nullable=True)  # Store Unix timestamp
+    end_at = Column(BigInteger, nullable=True)    # Store Unix timestamp
+    charge_at = Column(BigInteger, nullable=True)  # Store Unix timestamp
+    expire_by = Column(BigInteger, nullable=True)  # Store Unix timestamp
     customer_notify = Column(Boolean, default=True)
     offer_id = Column(String, nullable=True)
     notes = Column(Text, nullable=True)

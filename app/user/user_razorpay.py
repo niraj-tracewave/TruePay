@@ -88,8 +88,8 @@ def create_emi_mandate(
                     "id": subscription.id,
                     "razorpay_subscription_id": subscription.razorpay_subscription_id,
                     "status": subscription.status.value,
-                    "start_at": subscription.start_at.isoformat() if subscription.start_at else None,
-                    "end_at": subscription.end_at.isoformat() if subscription.end_at else None,
+                    "start_at": subscription.start_at if subscription.start_at else None,
+                    "end_at": subscription.end_at if subscription.end_at else None,
                     "short_url": subscription.short_url if subscription.short_url else None
                     
                 }
@@ -187,8 +187,8 @@ def create_emi_mandate(
                 "id": created_sub.id,
                 "razorpay_subscription_id": created_sub.razorpay_subscription_id,
                 "status": created_sub.status.value,
-                "start_at": created_sub.start_at.isoformat() if created_sub.start_at else None,
-                "end_at": created_sub.end_at.isoformat() if created_sub.end_at else None,
+                "start_at": created_sub.start_at if created_sub.start_at else None,
+                "end_at": created_sub.end_at if created_sub.end_at else None,
                 "short_url": created_sub.short_url if created_sub.short_url else None
             }
 

@@ -56,6 +56,28 @@ async def razorpay_webhook(request: Request):
                             pass
                         sub_data.status = "active"
                         session.commit()
+            case "subscription.authenticated":
+                sub_id = data.get("payload").get(
+                    "subscription", {}).get("entity", {}).get("id")
+                print("sub_id", sub_id)
+                if sub_id:
+                    filters = [
+                        Subscription.razorpay_subscription_id == sub_id,
+                        Subscription.is_deleted == False
+                    ]
+                    with DBSession() as session:
+                        sub_data = (
+                            session.query(Subscription)
+
+                            .filter(*filters)
+                            .first()
+                        )
+                        print("sub_data", sub_data)
+                        if not sub_data:
+                            pass
+                        sub_data.status = "authenticated"
+                        session.commit()
+
 
                 # subscription_id = data.get("payload", {}).get("subscription", {}).get("entity", {}).get("id")
                 # logger.info("--------authenticated", body)
