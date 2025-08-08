@@ -524,7 +524,7 @@ class AdminAuthService(UserAuthService):
             # Filter only the required fields for User
             user_data = form_data.model_dump(exclude_unset=True)
             user_data = {k: v for k, v in user_data.items() if
-                         k in ["name", "email", "phone", "address", "profile_image"]}
+                         k in ["name", "email", "phone", "address", "profile_image", "gender"]}
 
             # Check if a phone number already exists
             phone_number_filter = [User.phone == form_data.phone]
