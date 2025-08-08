@@ -75,7 +75,6 @@ class RazorpayService:
             }
             }
         """
-        breakpoint()
         subscription_data["start_at"]= self.get_next_month_fifth_timestamp()
         return self.client.subscription.create(subscription_data)
 
