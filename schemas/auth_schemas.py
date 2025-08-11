@@ -128,7 +128,7 @@ class UserUpdateData(BaseModel):
     aadhaar_file: Optional[str] = None
     is_deleted: Optional[bool] = None
     is_active: Optional[bool] = None
-    gender: GenderEnum
+    gender: Optional[GenderEnum] = None
 
     @model_validator(mode="after")
     def check_files_required_if_numbers_provided(cls, values):
