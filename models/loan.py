@@ -191,7 +191,7 @@ class EmiScheduleDate(CreateUpdateTime, CreateByUpdateBy):
     id = Column(Integer, primary_key=True, index=True)
 
     emi_schedule_loan_type = Column(Enum(LoanType), nullable=False)
-    emi_schedule_date = Column(Date, nullable=False)
+    emi_schedule_date = Column(String(500), nullable=False)
 
 
 class LoanDisbursementDetail(CreateUpdateTime, CreateByUpdateBy):

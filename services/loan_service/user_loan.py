@@ -408,14 +408,14 @@ class UserLoanService:
                 effective_processing_fee = self.get_effective_processing_fee(loan_with_docs)
 
                 gst_charge = app_config.GST_CHARGE
-
                 if loan_with_docs.approved_loan and loan_with_docs.status == "APPROVED":
                     emi_result = calculate_emi_schedule(
                         loan_amount=loan_with_docs.approved_loan,
                         tenure_months=loan_with_docs.tenure_months,
                         annual_interest_rate=loan_response["effective_interest_rate"],
                         processing_fee=effective_processing_fee,
-                        is_fee_percentage=True
+                        is_fee_percentage=True,
+                        loan_type=loan_with_docs.loan_type
                     )
 
                     if emi_result.get("success"):
@@ -447,7 +447,8 @@ class UserLoanService:
                             tenure_months=loan_approval_detail.approved_tenure_months,
                             annual_interest_rate=loan_approval_detail.approved_interest_rate,
                             processing_fee=effective_processing_fee,
-                            is_fee_percentage=True
+                            is_fee_percentage=True,
+                            loan_type=loan_with_docs.loan_type
                         )
                         if emi_result.get("success"):
                             loan_response["emi_info"] = emi_result["data"]
@@ -597,7 +598,7 @@ class UserLoanService:
                 tenure_months=loan_application_form.tenure_months,
                 annual_interest_rate=loan_application_form.interest_rate,
                 processing_fee=loan_application_form.processing_fee,
-                is_fee_percentage=True
+                is_fee_percentage=True,
             )
 
             emi = 0.0

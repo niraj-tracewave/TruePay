@@ -10,6 +10,8 @@ from starlette import status
 from app_logging import app_logger
 from common.cache_string import gettext
 from models.user import User, UserDocument
+from db_domains.db_interface import DBInterface
+from models.loan import EmiScheduleDate
 
 
 def format_user_response(user: User, documents: Optional[list[UserDocument]] = None) -> dict:
@@ -195,6 +197,7 @@ def calculate_emi(
 def calculate_emi_schedule(
         loan_amount: float, annual_interest_rate: float, tenure_months: int, processing_fee: float = 0.0,
         is_fee_percentage: bool = False, start_date: datetime = datetime.today(),
+        loan_type: str = None,
 
 ) -> Dict[str, Any]:
     """
@@ -232,10 +235,23 @@ def calculate_emi_schedule(
 
         balance = total_principal
         schedule = []
+        # Fetch Static Fixed Date 
+        emi_schedule_date = 5
+        try:
+            emi_schedule_db_interface = DBInterface(EmiScheduleDate)
+            existing_entry = emi_schedule_db_interface.read_single_by_fields(
+                    fields=[
+                        EmiScheduleDate.emi_schedule_loan_type == loan_type,
+                        EmiScheduleDate.is_deleted == False,
+                    ]
+                )
+            emi_schedule_date = existing_entry.emi_schedule_date if existing_entry else 5
+        except Exception as e:
+            print(f"Error fetching EMI schedule date: {e}")
 
         for month in range(tenure_months):
             month_date = current_month + relativedelta(months=month)
-            label = month_date.strftime("%b %Y")
+            label = f"{str(emi_schedule_date)} {month_date.strftime('%b %Y')}"
             interest = round(balance * monthly_rate, 2)
             principal_paid = round(emi - interest, 2)
             balance = round(balance - principal_paid, 2)
