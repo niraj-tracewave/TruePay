@@ -76,3 +76,32 @@ class Subscription(CreateUpdateTime, CreateByUpdateBy):
 
     customer = relationship("Customer", back_populates="subscriptions")
     plan = relationship("Plan", back_populates="subscriptions")
+    emis = relationship("SubscriptionEMI", back_populates="subscription")
+    
+
+class ForeClosure(CreateUpdateTime, CreateByUpdateBy):
+    __tablename__ = "foreclosures"
+
+    id = Column(Integer, primary_key=True, index=True)
+    subscription_id = Column(Integer, ForeignKey("subscriptions.id"), nullable=False)
+    amount = Column(Float, nullable=False)  # Amount in INR
+    reason = Column(Text, nullable=True)
+    status = Column(Enum("pending", "approved", "rejected", name="foreclosure_status"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    subscription = relationship("Subscription", back_populates="foreclosures")
+    foreclosure_details = relationship("PaymentDetails", back_populates="foreclosure", uselist=False)
+    
+class PaymentDetails(CreateUpdateTime, CreateByUpdateBy):
+    __tablename__ = "payment_details"
+
+    id = Column(Integer, primary_key=True, index=True)
+    foreclosure_id = Column(Integer, ForeignKey("foreclosures.id"), nullable=False)
+    payment_id = Column(String, unique=True, nullable=False)
+    amount = Column(Float, nullable=False)  # Amount in INR
+    currency = Column(String, default="INR")
+    status = Column(Enum("pending", "completed", "failed", name="payment_status"), nullable=False)
+    payment_method = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    foreclosure = relationship("ForeClosure", back_populates="payment_details")
