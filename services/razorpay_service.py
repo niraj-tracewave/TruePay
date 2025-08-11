@@ -1,6 +1,7 @@
 import razorpay
-from typing import  Dict
+from typing import Dict
 from datetime import datetime
+
 
 class RazorpayService:
     def __init__(self, key_id: str, key_secret: str):
@@ -77,6 +78,12 @@ class RazorpayService:
         """
         subscription_data["start_at"]= self.get_next_month_fifth_timestamp()
         return self.client.subscription.create(subscription_data)
+    
+    def fetch_plan(self, plan_id: str) -> Dict:
+        """
+        Fetch plan details
+        """
+        return self.client.plan.fetch(plan_id)
 
     def fetch_subscription(self, subscription_id: str) -> Dict:
         """
@@ -112,4 +119,32 @@ class RazorpayService:
             "subscription_id": subscription_id,
             "count": count,
             "skip": skip
+        })
+
+    def create_payment_link(self, amount: int, currency: str, description: str):
+        """
+        Create a payment link for a specific amount and description.
+        :param amount: Amount in paise (e.g., 10000 for ₹100).
+        :param currency: Currency code (e.g., "INR").
+        :param description: Description of the payment link.
+        """
+        return self.client.payment_link.create({
+            "amount": amount,
+            "currency": currency,
+            "description": description,
+            "accept_partial": False,
+            "first_min_partial_amount": amount,
+            "description": "Payment for policy no #23456",
+            "customer": {
+                "name": "Gaurav Kumar",
+                "contact": "+919000090000",
+                "email": "gaurav.kumar@example.com"
+            },
+            "notify": {
+                "sms": True,
+                "email": True
+            },
+            "reminder_enable": True,
+            "callback_url": "https://example-callback-url.com/",
+            "callback_method": "get"
         })

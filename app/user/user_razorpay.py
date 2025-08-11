@@ -260,6 +260,68 @@ def get_subscription(subscription_id: str, service: RazorpayService = Depends(ge
                     "error": str(e)
                 }
             }
+    
+@router.get("/get-closure-payment-link/{subscription_id}")
+def get_closure_payment_link(subscription_id: str, service: RazorpayService = Depends(get_razorpay_service)):
+    """AI is creating summary for get_closure_payment_link
+
+    Args:
+        subscription_id (str): The ID of the subscription for which the closure payment link is to be created.
+        service (RazorpayService, optional): The Razorpay service instance. Defaults to Depends(get_razorpay_service).
+
+    Returns:
+        [type]: [description]
+    """
+    try:
+        sub = service.fetch_subscription(subscription_id)
+        if not sub:
+            return {
+                "success": False,
+                "message": "Subscription not found",
+                "status_code": status.HTTP_404_NOT_FOUND,
+                "data": {}
+            }
+        if sub['status'] != 'active':
+            return {
+                "success": False,
+                "message": "Subscription is not active",
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": {}
+            }
+        # Step -2 Fetch Plan details
+        plan = service.fetch_plan(sub['plan_id'])
+        if not plan:
+            return {
+                "success": False,
+                "message": "Plan not found",
+                "status_code": status.HTTP_404_NOT_FOUND,
+                "data": {}
+            }
+            
+        amount_paise = plan['item']['amount']
+        amount_inr = amount_paise / 100
+        print(f"Amount: ₹{amount_inr}")
+        remaining_emis = sub['total_count'] - sub['paid_count']
+        amount_per_emi = plan['item']['amount']  # amount per billing cycle in paise
+        closure_amount_paise = amount_per_emi * remaining_emis
+
+        payment = service.create_payment_link(amount=closure_amount_paise, currency="INR", description="Closure Payment for Subscription")
+        return {
+            "success": True,
+            "message": "Payment Link Created Successfully!",
+            "status_code": status.HTTP_200_OK,
+            "data": {"payment": payment}
+        }
+            
+    except Exception as e:
+        return {
+                "success": False,
+                "message": "Internal Server Error",
+                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "data": {
+                    "error": str(e)
+                }
+            }
         
 
 @router.get("/get-subscription-invoices/{subscription_id}")
