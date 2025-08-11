@@ -1,7 +1,7 @@
 def get_otp_message(otp: str) -> str:
     return (
         f"Hello Customer,\nYour OTP for login is {otp}. "
-        f"This OTP is valid for 15 minutes. "
+        f"This OTP is valid for 5 minutes. "
         f"Please do not share it with anyone.\nTRACEWAVE##"
     )
 
