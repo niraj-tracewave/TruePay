@@ -116,7 +116,8 @@ def create_emi_mandate(
             tenure_months=approved_tenure_months,
             annual_interest_rate=approved_interest_rate,
             processing_fee=approved_processing_fee,
-            is_fee_percentage=True
+            is_fee_percentage=True,
+            loan_type=loan_details.loan_type
         )
         if emi_result["status_code"] != status.HTTP_200_OK:
             return {
