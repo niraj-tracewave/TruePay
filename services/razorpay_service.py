@@ -121,7 +121,7 @@ class RazorpayService:
             "skip": skip
         })
 
-    def create_payment_link(self, amount: int, currency: str, description: str):
+    def create_payment_link(self, amount: int, currency: str, description: str, subscription_id: str):
         """
         Create a payment link for a specific amount and description.
         :param amount: Amount in paise (e.g., 10000 for ₹100).
@@ -134,11 +134,33 @@ class RazorpayService:
             "description": description,
             "accept_partial": False,
             "first_min_partial_amount": amount,
+            "reference_id": subscription_id, #NOTE This to capture paymenet based on subscription
             "notify": {
                 "sms": True,
                 "email": True
+            },
+            "notes": {
+                "subscription_id": subscription_id
             },
             "reminder_enable": True,
             "callback_url": "https://truepay.co.in/",
             "callback_method": "get"
         })
+
+    def get_payment_link_details(self, payment_id: str):
+        """
+        Fetch payment details from Razorpay.
+        :param payment_id: Razorpay payment ID (e.g., 'pay_29QQoUBi66xm2f').
+        """
+        try:
+            payment = self.client.payment_link.fetch(payment_id)
+            return payment
+        except Exception as e:
+            raise Exception(f"Error fetching payment details for {payment_id}: {str(e)}")
+
+    def fetch_payment_details(self, payment_id: str):
+        try:
+            payment = self.client.payment.fetch(payment_id)
+            return payment
+        except Exception as e:
+            raise Exception(f"Error fetching payment details for {payment_id}: {str(e)}")

@@ -100,6 +100,7 @@ class PaymentDetails(CreateUpdateTime, CreateByUpdateBy):
     id = Column(Integer, primary_key=True, index=True)
     foreclosure_id = Column(Integer, ForeignKey("foreclosures.id"), nullable=False)
     payment_id = Column(String, unique=True, nullable=False)
+    order_id = Column(String, nullable=False)
     amount = Column(Float, nullable=False)  # Amount in INR
     currency = Column(String, default="INR")
     status = Column(Enum("pending", "completed", "failed", "created", name="payment_status"), nullable=False)

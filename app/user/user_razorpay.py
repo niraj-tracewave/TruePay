@@ -1,3 +1,4 @@
+import time
 from datetime import datetime
 from fastapi import Request
 from fastapi import APIRouter, Depends
@@ -267,6 +268,28 @@ def get_subscription(subscription_id: str, service: RazorpayService = Depends(ge
                     "error": str(e)
                 }
             }
+        
+@router.get("/get-subscription-invoices/{subscription_id}")
+def get_subscription_invoices(subscription_id: str, service: RazorpayService = Depends(get_razorpay_service), count: int = 10, skip: int = 0):
+    """
+    Fetch all invoices for a given subscription with optional pagination params.
+    """
+    try:
+        invoices = service.fetch_invoices_for_subscription(subscription_id, count=count, skip=skip)
+        return {
+            "success": True,
+            "message": "Invoices fetched successfully!",
+            "status_code": status.HTTP_200_OK,
+            "data": {"invoices": invoices}
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": "Failed to fetch invoices",
+            "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "data": {"error": str(e)}
+        }
+        
 @router.get("/get-closure-payment-link/{subscription_id}")
 def get_closure_payment_link(subscription_id: str, service: RazorpayService = Depends(get_razorpay_service)):
     
@@ -298,7 +321,27 @@ def get_closure_payment_link(subscription_id: str, service: RazorpayService = De
         remaining_emis = max(0, sub['total_count'] - sub['paid_count'])
         closure_amount_paise = amount_per_emi * remaining_emis
 
-        payment = service.create_payment_link(amount=closure_amount_paise, currency="INR", description="Closure Payment")
+        try:
+            ref_id = f"{sub['id']}+{int(time.time() * 1000)}"
+            payment = service.create_payment_link(
+                amount=closure_amount_paise,
+                currency="INR",
+                description="Closure Payment",
+                subscription_id=ref_id
+            )
+        except Exception as e:
+            # Check if the error message matches the "reference_id already exists" case
+            error_message = str(e)
+            if "payment link with given reference_id" in error_message and "already exists" in error_message:
+                # Handle the duplicate reference_id error specifically
+                print("Duplicate reference_id detected. Please generate a unique reference_id.")
+                # You can either generate a new reference_id here or return an error response
+            else:
+                # For other exceptions, raise or handle differently
+                raise
+        else:
+            # No error, continue normally
+            print("Payment link created successfully:", payment)
         if not payment:
             return JSONResponse(
                 content={"success": False, "message": "Failed to create payment link", "data": {}},
@@ -325,9 +368,9 @@ def get_closure_payment_link(subscription_id: str, service: RazorpayService = De
         foreclosure_response = foreclosure_service.create_foreclosure(foreclosure_data)
         if not foreclosure_response['success']:
             return foreclosure_response
-
         payment_details_data = {
             "payment_id": payment['id'],
+            "order_id": ref_id,
             "amount": closure_amount_paise / 100,
             "currency": "INR",
             "status": payment['status'],
@@ -350,23 +393,10 @@ def get_closure_payment_link(subscription_id: str, service: RazorpayService = De
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
-@router.get("/get-subscription-invoices/{subscription_id}")
-def get_subscription_invoices(subscription_id: str, service: RazorpayService = Depends(get_razorpay_service), count: int = 10, skip: int = 0):
+        
+@router.get("/get-payment-details/{payment_id}")
+def get_payment_details(payment_id: str, service: RazorpayService = Depends(get_razorpay_service)):
     """
-    Fetch all invoices for a given subscription with optional pagination params.
+    API to fetch payment details from Razorpay.
     """
-    try:
-        invoices = service.fetch_invoices_for_subscription(subscription_id, count=count, skip=skip)
-        return {
-            "success": True,
-            "message": "Invoices fetched successfully!",
-            "status_code": status.HTTP_200_OK,
-            "data": {"invoices": invoices}
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": "Failed to fetch invoices",
-            "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-            "data": {"error": str(e)}
-        }
+    return service.get_payment_link_details(payment_id)

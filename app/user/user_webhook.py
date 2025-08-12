@@ -7,6 +7,9 @@ from fastapi import Request, APIRouter
 from fastapi.responses import JSONResponse
 from config import app_config
 from fastapi import APIRouter, Request
+from services.razorpay_service import RazorpayService
+razorpay_service_obj = RazorpayService(
+                app_config.RAZORPAY_KEY_ID, app_config.RAZORPAY_SECRET)
 
 router = APIRouter(prefix="/razorpay", tags=["RazorPay API's"])
 
@@ -77,23 +80,19 @@ async def razorpay_webhook(request: Request):
                             pass
                         sub_data.status = "authenticated"
                         session.commit()
-
-
-                # subscription_id = data.get("payload", {}).get("subscription", {}).get("entity", {}).get("id")
-                # logger.info("--------authenticated", body)
-                # logger.info("Subscription Authenticated:", data)
-                # logger.info("Subscription ID:", subscription_id)
-
-            # case "subscription.charged":
-            #     logger.info("--------charged %s", body)
-            #     print("EMI Charged:", data)
-
-            # case "payment.failed":
-            #     print("Payment Failed:", data)
-
-            # case "subscription.completed":
-            #     logger.info("--------completed %s", body)
-            #     print("Subscription Completed:", data)
+            case "payment.authenticated":
+                print("Payment Authenticated:", data)
+                print("Event:", event)
+            case "payment.captured":
+                print("Payment Captured:", data)
+                print("Event:", event)
+                payload = data.get("payload")
+                payment_id = payload["payment"]["entity"]["id"]
+                # Step 1: Fetch payment details from Razorpay
+                payment = razorpay_service_obj.fetch_payment_details(payment_id)
+                breakpoint()
+                # Step 2: This contains the payment link ID
+                payment_link_id = payment.get("payment_link_id")
 
             case _:
                 # logger.warning("Unhandled event: %s", event)

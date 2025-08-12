@@ -16,6 +16,7 @@ class PaymentDetailsCreateSchema(BaseModel):
     foreclosure_id: int = Field(..., gt=0,
                                 description="ID of the associated foreclosure")
     payment_id: str = Field(..., description="Unique payment identifier")
+    order_id: str = Field(..., description="Order ID from Razorpay")
     amount: float = Field(..., gt=0, description="Payment amount in INR")
     currency: str = Field(default="INR", description="Currency code")
     status: PaymentStatus = Field(..., description="Payment status")
@@ -59,6 +60,7 @@ class PaymentDetailsResponseSchema(BaseModel):
     foreclosure_id: int = Field(...,
                                 description="ID of the associated foreclosure")
     payment_id: str = Field(..., description="Unique payment identifier")
+    order_id: str = Field(..., description="Order ID from Razorpay")
     amount: float = Field(..., description="Payment amount in INR")
     currency: str = Field(..., description="Currency code")
     status: PaymentStatus = Field(..., description="Payment status")
