@@ -286,3 +286,9 @@ class LoanDisbursementForm(BaseModel):
 class LoanAadharVerifiedStatusForm(BaseModel):
     applicant_id: int
     aadhaar_verified: bool
+
+
+class LoanApprovedDocumentForm(BaseModel):
+    applicant_id: int
+    document_name: str
+    document_file: str

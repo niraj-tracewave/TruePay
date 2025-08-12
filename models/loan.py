@@ -61,6 +61,7 @@ class LoanApplicant(CreateUpdateTime, CreateByUpdateBy):
     bank_accounts = relationship("BankAccount", back_populates="applicant", cascade="all, delete-orphan")
     approval_details = relationship("LoanApprovalDetail", back_populates="applicant", cascade="all, delete-orphan", overlaps="approval_details")
     loan_disbursement = relationship("LoanDisbursementDetail", back_populates="applicant", cascade="all, delete-orphan")
+    loan_approved_document = relationship("ApprovedLoanDocument", back_populates="applicant", cascade="all, delete-orphan")
 
     plans = relationship("Plan", back_populates="applicant", cascade="all, delete-orphan")
 
@@ -215,3 +216,18 @@ class LoanDisbursementDetail(CreateUpdateTime, CreateByUpdateBy):
     transaction_id = Column(String, nullable=True)
 
     applicant = relationship("LoanApplicant", back_populates="loan_disbursement")
+
+
+class ApprovedLoanDocument(CreateUpdateTime, CreateByUpdateBy):
+    __tablename__ = "approved_loan_documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    applicant_id = Column(Integer, ForeignKey("loan_applicants.id"), nullable=False, index=True)
+
+    document_name = Column(Text, nullable=True)
+    document_file = Column(Text, nullable=True)
+
+    applicant = relationship("LoanApplicant", back_populates="loan_approved_document")
+
+    def __repr__(self):
+        return f"<LoanDocument id={self.id} applicant_id={self.applicant_id} document_name={self.document_name}>"

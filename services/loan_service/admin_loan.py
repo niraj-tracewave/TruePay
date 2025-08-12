@@ -10,8 +10,9 @@ from db_domains.db import DBSession
 from db_domains.db_interface import DBInterface
 from models.razorpay import Plan, Subscription
 from models.credit import CreditScoreRangeRate
-from models.loan import LoanDocument, LoanApplicant
-from schemas.loan_schemas import LoanApplicantResponseSchema, UpdateLoanForm, LoanApplicantResponseSchemaForAdmin
+from models.loan import LoanDocument, LoanApplicant, ApprovedLoanDocument
+from schemas.loan_schemas import LoanApplicantResponseSchema, UpdateLoanForm, LoanApplicantResponseSchemaForAdmin, \
+    LoanApprovedDocumentForm
 from services.loan_service.user_loan import UserLoanService
 
 
@@ -443,4 +444,163 @@ class AdminLoanService(UserLoanService):
                 "message": str(e),
                 "status_code": status.HTTP_400_BAD_REQUEST,
                 "data": []
+            }
+
+    def add_approved_loan_document(self, user_id: int, form_data: LoanApprovedDocumentForm) -> Any:
+        try:
+            self.db_interface = DBInterface(ApprovedLoanDocument)
+
+            app_logger.info(
+                f"[UserID: {user_id}] Add approved document for loan : {form_data.applicant_id}"
+            )
+            existing_entry = self.db_interface.read_single_by_fields(
+                fields=[
+                    ApprovedLoanDocument.document_name == form_data.document_name,
+                    ApprovedLoanDocument.is_deleted == False,
+                    ApprovedLoanDocument.applicant_id == form_data.applicant_id,
+                ]
+            )
+
+            if existing_entry:
+                return {
+                    "success": False,
+                    "message": "Document already added for this loan.",
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "data": {}
+                }
+
+            data = {
+                "document_name": form_data.document_name,
+                "document_file": form_data.document_file,
+                "applicant_id": form_data.applicant_id,
+            }
+
+            app_logger.info(
+                f"[UserID: {user_id}] Add new document : {form_data.dict()}"
+            )
+            data["created_by"] = user_id
+            new_entry = self.db_interface.create(data=data)
+
+            return {
+                "success": True,
+                "message": "Document added successfully.",
+                "status_code": status.HTTP_200_OK,
+                "data": {
+                    "document_entry": {
+                        "id": new_entry.id,
+                        "document_file": new_entry.document_file,
+                        "document_name": new_entry.document_name,
+                    }
+                }
+            }
+
+        except Exception as e:
+            app_logger.exception(f"[UserID: {user_id}] Error adding document: {str(e)}")
+            return {
+                "success": False,
+                "message": str(e),
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": {}
+            }
+
+    def delete_loan_document(self, user_id: str, document_id: str) -> Dict[str, Any]:
+        try:
+            existing_entry = self.db_interface.read_single_by_fields(
+                fields=[
+                    ApprovedLoanDocument.is_deleted == False,
+                    ApprovedLoanDocument.id == document_id,
+                ]
+            )
+            if existing_entry:
+                loan_document_interface = DBInterface(ApprovedLoanDocument)
+                update_fields = {
+                    "is_deleted": True,
+                    "modified_by": user_id,
+                    "deleted_at": datetime.now(),
+                }
+                loan_document_interface.update(_id=str(document_id), data=update_fields)
+            else:
+                app_logger.error(f"Error deleting Loan document with ID {document_id}")
+                return {
+                    "success": False,
+                    "message": gettext("not_found").format("Loan Document"),
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "data": {}
+                }
+            return {
+                "success": True,
+                "message": gettext("deleted_successfully").format("Loan Document"),
+                "status_code": status.HTTP_200_OK,
+                "data": {}
+            }
+        except Exception as e:
+            app_logger.error(f"Error deleting Loan document with ID {document_id}: {str(e)}", exc_info=True)
+            return {
+                "success": False,
+                "message": gettext("something_went_wrong"),
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": {}
+            }
+
+    def update_loan_document(
+            self, user_id: int, document_id: str, form_data: LoanApprovedDocumentForm
+    ):
+        try:
+            print(document_id)
+            existing_entry = self.db_interface.read_by_id(document_id)
+            if not existing_entry:
+                return {
+                    "success": False,
+                    "message": f"Loan document with ID {document_id} not found.",
+                    "status_code": status.HTTP_404_NOT_FOUND,
+                    "data": {}
+                }
+
+            existing_entry = self.db_interface.read_single_by_fields(
+                fields=[
+                    ApprovedLoanDocument.document_name == form_data.document_name,
+                    ApprovedLoanDocument.is_deleted == False,
+                    ApprovedLoanDocument.applicant_id == form_data.applicant_id,
+                    ApprovedLoanDocument.id != document_id
+                ]
+            )
+
+            if existing_entry:
+                return {
+                    "success": False,
+                    "message": "Document already added for this loan.",
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "data": {}
+                }
+
+            update_fields = {
+                "document_name": form_data.document_name,
+                "document_file": form_data.document_file,
+                "modified_by": user_id,
+            }
+
+            app_logger.info(
+                f"[UserID: {user_id}] Updating Loan Document data ID={document_id} with: {update_fields}"
+            )
+            self.db_interface.update(_id=str(document_id), data=update_fields)
+
+            return {
+                "success": True,
+                "message": "Loan document data updated successfully.",
+                "status_code": status.HTTP_200_OK,
+                "data": {
+                    "credit_range_rate": {
+                        "id": document_id,
+                        **update_fields
+                    }
+                }
+            }
+
+        except Exception as e:
+            app_logger.exception(f"[UserID: {user_id}] Error updating loan document data: {str(e)}")
+            return {
+                "success": False,
+                "message": "Something went wrong during update.",
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": {}
             }
