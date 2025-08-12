@@ -76,7 +76,8 @@ class Subscription(CreateUpdateTime, CreateByUpdateBy):
 
     customer = relationship("Customer", back_populates="subscriptions")
     plan = relationship("Plan", back_populates="subscriptions")
-    emis = relationship("SubscriptionEMI", back_populates="subscription")
+    foreclosures = relationship("ForeClosure", back_populates="subscription")
+    
     
 
 class ForeClosure(CreateUpdateTime, CreateByUpdateBy):
@@ -90,7 +91,8 @@ class ForeClosure(CreateUpdateTime, CreateByUpdateBy):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     subscription = relationship("Subscription", back_populates="foreclosures")
-    foreclosure_details = relationship("PaymentDetails", back_populates="foreclosure", uselist=False)
+    payment_details = relationship("PaymentDetails", back_populates="foreclosure", uselist=False)
+
     
 class PaymentDetails(CreateUpdateTime, CreateByUpdateBy):
     __tablename__ = "payment_details"
@@ -100,8 +102,8 @@ class PaymentDetails(CreateUpdateTime, CreateByUpdateBy):
     payment_id = Column(String, unique=True, nullable=False)
     amount = Column(Float, nullable=False)  # Amount in INR
     currency = Column(String, default="INR")
-    status = Column(Enum("pending", "completed", "failed", name="payment_status"), nullable=False)
-    payment_method = Column(String, nullable=False)
+    status = Column(Enum("pending", "completed", "failed", "created", name="payment_status"), nullable=False)
+    payment_method = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     foreclosure = relationship("ForeClosure", back_populates="payment_details")

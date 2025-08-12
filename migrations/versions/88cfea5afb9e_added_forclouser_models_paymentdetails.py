@@ -45,7 +45,7 @@ def upgrade() -> None:
     sa.Column('payment_id', sa.String(), nullable=False),
     sa.Column('amount', sa.Float(), nullable=False),
     sa.Column('currency', sa.String(), nullable=True),
-    sa.Column('status', sa.Enum('pending', 'completed', 'failed', name='payment_status'), nullable=False),
+    sa.Column('status', sa.Enum('pending', 'completed', 'failed','created', name='payment_status'), nullable=False),
     sa.Column('payment_method', sa.String(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('modified_at', sa.DateTime(), nullable=True),
