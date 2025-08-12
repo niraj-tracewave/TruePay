@@ -134,17 +134,11 @@ class RazorpayService:
             "description": description,
             "accept_partial": False,
             "first_min_partial_amount": amount,
-            "description": "Payment for policy no #23456",
-            "customer": {
-                "name": "Gaurav Kumar",
-                "contact": "+919000090000",
-                "email": "gaurav.kumar@example.com"
-            },
             "notify": {
                 "sms": True,
                 "email": True
             },
             "reminder_enable": True,
-            "callback_url": "https://example-callback-url.com/",
+            "callback_url": "https://truepay.co.in/",
             "callback_method": "get"
         })

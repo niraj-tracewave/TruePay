@@ -15,6 +15,9 @@ from services.razorpay_service import RazorpayService
 from services.dependencies import get_razorpay_service
 from schemas.razorpay_schema import CreatePlanSchema, CreateSubscriptionSchema
 from common.utils import calculate_emi_schedule
+from fastapi.responses import JSONResponse
+from db_domains.db_interface import DBInterface
+
 
 
 router = APIRouter(prefix="/razorpay", tags=["RazorPay API's"])
@@ -264,27 +267,16 @@ def get_subscription(subscription_id: str, service: RazorpayService = Depends(ge
                     "error": str(e)
                 }
             }
-    
 @router.get("/get-closure-payment-link/{subscription_id}")
 def get_closure_payment_link(subscription_id: str, service: RazorpayService = Depends(get_razorpay_service)):
-    """AI is creating summary for get_closure_payment_link
-
-    Args:
-        subscription_id (str): The ID of the subscription for which the closure payment link is to be created.
-        service (RazorpayService, optional): The Razorpay service instance. Defaults to Depends(get_razorpay_service).
-
-    Returns:
-        [type]: [description]
-    """
+    
     try:
         sub = service.fetch_subscription(subscription_id)
         if not sub:
-            return {
-                "success": False,
-                "message": "Subscription not found",
-                "status_code": status.HTTP_404_NOT_FOUND,
-                "data": {}
-            }
+            return JSONResponse(
+                content={"success": False, "message": "Subscription not found", "data": {}},
+                status_code=status.HTTP_404_NOT_FOUND
+            )
         #NOTE: Check the status == "active" IF Condition is --> If 1 or more EMIs needs to be paid before foreclosure
         # if sub['status'] != 'active':
         #     return {
@@ -293,102 +285,70 @@ def get_closure_payment_link(subscription_id: str, service: RazorpayService = De
         #         "status_code": status.HTTP_400_BAD_REQUEST,
         #         "data": {}
         #     }
-        # Step -2 Fetch Plan details
+        
+        # step-2 Fetch Plan details
         plan = service.fetch_plan(sub['plan_id'])
         if not plan:
-            return {
-                "success": False,
-                "message": "Plan not found",
-                "status_code": status.HTTP_404_NOT_FOUND,
-                "data": {}
-            }
-            
-        amount_paise = plan['item']['amount']
-        amount_inr = amount_paise / 100
-        print(f"Amount: ₹{amount_inr}")
-        remaining_emis = sub['total_count'] - sub['paid_count']
-        amount_per_emi = plan['item']['amount']  # amount per billing cycle in paise
-        closure_amount_paise = amount_per_emi * remaining_emis
-        payment = service.create_payment_link(amount=closure_amount_paise, currency="INR", description="Closure Payment for Subscription")
-        #NOTE: Update the foreclosure details with the payment link [ ForeClosure, PaymentDetails ]
-        try:
-            # Fetch SUB Database ID:
-            from db_domains.db_interface import DBInterface
-            sub_db_interface = DBInterface(Subscription)
-            existing_sub = sub_db_interface.read_single_by_fields(
-                fields=[
-                    Subscription.razorpay_subscription_id == sub["id"],
-                    Subscription.is_deleted == False,
-                ]
+            return JSONResponse(
+                content={"success": False, "message": "Plan not found", "data": {}},
+                status_code=status.HTTP_404_NOT_FOUND
             )
-            if existing_sub:
-                foreclosure_data = {
-                    "subscription_id": existing_sub.id,
-                    "amount": closure_amount_paise / 100,  # Convert to INR
-                    "reason": "Subscription Closure",
-                    "status": "pending"
-                }
-                foreclosure_response = foreclosure_service.create_foreclosure(foreclosure_data)
-                if not foreclosure_response['success']:
-                    return {
-                        "success": False,
-                        "message": foreclosure_response['message'],
-                        "status_code": foreclosure_response['status_code'],
-                        "data": {}
-                    }
-                payment_details_data = {
-                    "payment_id": payment['id'],
-                    "amount": closure_amount_paise / 100,  # Convert to INR
-                    "currency": "INR",
-                    "status": payment['status'],
-                    "payment_method": None,
-                    "foreclosure_id": foreclosure_response.get("data").id,
-                }
-                payment_details_response = payment_details_service.create_payment_details(payment_details_data)
-                if not payment_details_response['success']:
-                    return {
-                        "success": False,
-                        "message": payment_details_response['message'],
-                        "status_code": payment_details_response['status_code'],
-                        "data": {}
-                    }
-        except Exception as e:
-            return {
-                "success": False,
-                "message": "Failed to create foreclosure or payment details",
-                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "data": {
-                    "error": str(e)
-                }
-            }
+
+        amount_per_emi = plan['item']['amount']
+        remaining_emis = max(0, sub['total_count'] - sub['paid_count'])
+        closure_amount_paise = amount_per_emi * remaining_emis
+
+        payment = service.create_payment_link(amount=closure_amount_paise, currency="INR", description="Closure Payment")
+        if not payment:
+            return JSONResponse(
+                content={"success": False, "message": "Failed to create payment link", "data": {}},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        #NOTE: Update the foreclosure details with the payment link [ ForeClosure, PaymentDetails ]
+        sub_db_interface = DBInterface(Subscription)
+        existing_sub = sub_db_interface.read_single_by_fields([
+            Subscription.razorpay_subscription_id == sub["id"],
+            Subscription.is_deleted == False
+        ])
+        if not existing_sub:
+            return JSONResponse(
+                content={"success": False, "message": "Subscription not found in DB", "data": {}},
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        foreclosure_data = {
+            "subscription_id": existing_sub.id,
+            "amount": closure_amount_paise / 100,
+            "reason": "Subscription Closure",
+            "status": "pending"
+        }
+        foreclosure_response = foreclosure_service.create_foreclosure(foreclosure_data)
+        if not foreclosure_response['success']:
+            return foreclosure_response
+
+        payment_details_data = {
+            "payment_id": payment['id'],
+            "amount": closure_amount_paise / 100,
+            "currency": "INR",
+            "status": payment['status'],
+            "payment_method": None,
+            "foreclosure_id": foreclosure_response["data"].id
+        }
+        payment_details_response = payment_details_service.create_payment_details(payment_details_data)
+        if not payment_details_response['success']:
+            return payment_details_response
         #NOTE: Afterwards
         #Track the payment status if Success --> Cancel The subscription and update the foreclosure status     
-        if not payment:
-            return {
-                "success": False,
-                "message": "Failed to create payment link",
-                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "data": {}
-            }
-        
-        
-        return {
-            "success": True,
-            "message": "Payment Link Created Successfully!",
-            "status_code": status.HTTP_200_OK,
-            "data": {"payment": payment}
-        }
-            
+        return JSONResponse(
+            content={"success": True, "message": "Payment Link Created Successfully!", "data": {"payment": payment}},
+            status_code=status.HTTP_200_OK
+        )
+
     except Exception as e:
-        return {
-                "success": False,
-                "message": "Internal Server Error",
-                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "data": {
-                    "error": str(e)
-                }
-            }
-        
+        return JSONResponse(
+            content={"success": False, "message": "Internal Server Error", "data": {"error": str(e)}},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 @router.get("/get-subscription-invoices/{subscription_id}")
 def get_subscription_invoices(subscription_id: str, service: RazorpayService = Depends(get_razorpay_service), count: int = 10, skip: int = 0):
