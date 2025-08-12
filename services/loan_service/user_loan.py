@@ -300,6 +300,7 @@ class UserLoanService:
                         selectinload(LoanApplicant.approval_details),
                         selectinload(LoanApplicant.credit_score_range_rate),
                         selectinload(LoanApplicant.loan_disbursement),
+                        selectinload(LoanApplicant.loan_approved_document),
                         selectinload(LoanApplicant.plans).selectinload(Plan.subscriptions),
                         with_loader_criteria(LoanDocument, LoanDocument.is_deleted == False)
                     )
@@ -372,6 +373,15 @@ class UserLoanService:
                         "approved_tenure_months": approval_detail.approved_tenure_months
                     }
                 for approval_detail in loan_with_docs.approval_details ]
+
+                loan_response["loan_approved_document"] = [
+                    {
+                        "id": approved_document.id,
+                        "document_name": approved_document.document_name,
+                        "document_file": approved_document.document_file,
+                        "is_deleted": approved_document.is_deleted,
+                    }
+                    for approved_document in loan_with_docs.loan_approved_document]
 
                 loan_response["bank_accounts"] = [
                         {

@@ -5,7 +5,7 @@ from starlette import status
 
 from common.response import ApiResponse
 from models.loan import LoanApplicant
-from schemas.loan_schemas import LoanForm, UpdateLoanForm
+from schemas.loan_schemas import LoanForm, UpdateLoanForm, LoanApprovedDocumentForm
 from services.loan_service.admin_loan import AdminLoanService
 
 router = APIRouter(prefix="/admin/loan", tags=["Admin Panel Loan API's"])
@@ -106,6 +106,44 @@ def get_all_user_approved_loans(
         offset=offset, start_date=start_date, end_date=end_date
     )
 
+    return ApiResponse.create_response(
+        success=response.get("success"),
+        message=response.get("message"),
+        status_code=response.get("status_code", status.HTTP_200_OK),
+        data=response.get("data")
+    )
+
+
+
+@router.post("/add-approved-document", summary="Add Approve Loan Document")
+def add_approved_loan_document(request: Request, form_data: LoanApprovedDocumentForm):
+    user_state = getattr(request.state, "user", None)
+
+    response = admin_loan_service.add_approved_loan_document(user_id=user_state.get("id"), form_data=form_data)
+    return ApiResponse.create_response(
+        success=response.get("success"),
+        message=response.get("message"),
+        status_code=response.get("status_code", status.HTTP_200_OK),
+        data=response.get("data")
+    )
+
+@router.delete("/delete-approved-document/{document_id}", summary="Delete Approve Loan Document")
+def delete_approved_loan_document(request: Request, document_id: str):
+    user_state = getattr(request.state, "user", None)
+
+    response = admin_loan_service.delete_loan_document(user_id=user_state.get("id"), document_id=document_id)
+    return ApiResponse.create_response(
+        success=response.get("success"),
+        message=response.get("message"),
+        status_code=response.get("status_code", status.HTTP_200_OK),
+        data=response.get("data")
+    )
+
+@router.put("/update-approved-document/{document_id}", summary="Update Approve Loan Document")
+def update_approved_loan_document(request: Request, document_id: str, form_data: LoanApprovedDocumentForm):
+    user_state = getattr(request.state, "user", None)
+
+    response = admin_loan_service.update_loan_document(user_id=user_state.get("id"), document_id=document_id, form_data=form_data)
     return ApiResponse.create_response(
         success=response.get("success"),
         message=response.get("message"),
