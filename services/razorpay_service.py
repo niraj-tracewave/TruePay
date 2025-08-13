@@ -1,6 +1,7 @@
 import razorpay
-from typing import  Dict
+from typing import Dict
 from datetime import datetime
+
 
 class RazorpayService:
     def __init__(self, key_id: str, key_secret: str):
@@ -77,6 +78,12 @@ class RazorpayService:
         """
         subscription_data["start_at"]= self.get_next_month_fifth_timestamp()
         return self.client.subscription.create(subscription_data)
+    
+    def fetch_plan(self, plan_id: str) -> Dict:
+        """
+        Fetch plan details
+        """
+        return self.client.plan.fetch(plan_id)
 
     def fetch_subscription(self, subscription_id: str) -> Dict:
         """
@@ -113,3 +120,47 @@ class RazorpayService:
             "count": count,
             "skip": skip
         })
+
+    def create_payment_link(self, amount: int, currency: str, description: str, subscription_id: str):
+        """
+        Create a payment link for a specific amount and description.
+        :param amount: Amount in paise (e.g., 10000 for ₹100).
+        :param currency: Currency code (e.g., "INR").
+        :param description: Description of the payment link.
+        """
+        return self.client.payment_link.create({
+            "amount": amount,
+            "currency": currency,
+            "description": description,
+            "accept_partial": False,
+            "first_min_partial_amount": amount,
+            "reference_id": subscription_id, #NOTE This to capture paymenet based on subscription
+            "notify": {
+                "sms": True,
+                "email": True
+            },
+            "notes": {
+                "subscription_id": subscription_id
+            },
+            "reminder_enable": True,
+            "callback_url": "https://truepay.co.in/",
+            "callback_method": "get"
+        })
+
+    def get_payment_link_details(self, payment_id: str):
+        """
+        Fetch payment details from Razorpay.
+        :param payment_id: Razorpay payment ID (e.g., 'pay_29QQoUBi66xm2f').
+        """
+        try:
+            payment = self.client.payment_link.fetch(payment_id)
+            return payment
+        except Exception as e:
+            raise Exception(f"Error fetching payment details for {payment_id}: {str(e)}")
+
+    def fetch_payment_details(self, payment_id: str):
+        try:
+            payment = self.client.payment.fetch(payment_id)
+            return payment
+        except Exception as e:
+            raise Exception(f"Error fetching payment details for {payment_id}: {str(e)}")
