@@ -92,10 +92,29 @@ def format_plan_and_subscriptions(plans: list) -> list[dict]:
     for plan in plans:
         subscriptions_data = []
         for sub in plan.subscriptions:
+            for foreclosure in sub.foreclosures:
+                breakpoint()
+                foreclosure_data = {
+                    "id": foreclosure.id,
+                    "subscription_id": foreclosure.subscription_id,
+                    "amount": foreclosure.amount,
+                    "status": foreclosure.status,
+                }
+                if foreclosure.payment_details:
+                    payment_details = {
+                        "id": foreclosure.payment_details.id,
+                        "payment_id": foreclosure.payment_details.payment_id,
+                        "amount": foreclosure.payment_details.amount,
+                        "status": foreclosure.payment_details.status.value if hasattr(foreclosure.payment_details.status, "value") else str(foreclosure.payment_details.status),
+                        "created_at": foreclosure.payment_details.created_at.isoformat() if foreclosure.payment_details.created_at else None
+                    }
+                    foreclosure_data["payment_details"] = payment_details
+                sub.foreclosure_data = foreclosure_data
             subscriptions_data.append({
                 "subscription_id": sub.id,
                 "razorpay_subscription_id": sub.razorpay_subscription_id,
                 "status": sub.status,
+                "foreclosure_data": sub.foreclosure_data
             })
 
         formatted_data.append({

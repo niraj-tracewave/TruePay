@@ -22,7 +22,7 @@ from db_domains import Base
 from db_domains.db import DBSession
 from db_domains.db_interface import DBInterface
 from models.loan import LoanDocument, LoanApplicant, LoanApprovalDetail
-from models.razorpay import Plan
+from models.razorpay import Plan, Subscription, ForeClosure, PaymentDetails
 from schemas.loan_schemas import LoanForm, LoanApplicantResponseSchema, UserApprovedLoanForm, InstantCashForm, \
     LoanConsentForm, LoanDisbursementForm, LoanAadharVerifiedStatusForm
 from services.razorpay_service import RazorpayService
@@ -301,7 +301,7 @@ class UserLoanService:
                         selectinload(LoanApplicant.credit_score_range_rate),
                         selectinload(LoanApplicant.loan_disbursement),
                         selectinload(LoanApplicant.loan_approved_document),
-                        selectinload(LoanApplicant.plans).selectinload(Plan.subscriptions),
+                        selectinload(LoanApplicant.plans).selectinload(Plan.subscriptions).selectinload(Subscription.foreclosures).selectinload(ForeClosure.payment_details),
                         with_loader_criteria(LoanDocument, LoanDocument.is_deleted == False)
                     )
                     .filter(*filters)
@@ -495,7 +495,9 @@ class UserLoanService:
                 "success": False,
                 "message": gettext("something_went_wrong"),
                 "status_code": status.HTTP_400_BAD_REQUEST,
-                "data": {}
+                "data": {
+                    "error": str(e)
+                }
             }
 
     async def upload_files_to_s3(self, file_type: UploadFileType, files: List[UploadFile]):
