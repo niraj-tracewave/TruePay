@@ -398,4 +398,18 @@ def get_payment_details(payment_id: str, service: RazorpayService = Depends(get_
     """
     API to fetch payment details from Razorpay.
     """
-    return service.get_payment_link_details(payment_id)
+    try:
+        payment_link_details = service.get_payment_link_details(payment_id)
+        return {
+            "success": True,
+            "message": "Payment link details fetched successfully!",
+            "status_code": status.HTTP_200_OK,
+            "data": {"payment_link_data": payment_link_details}
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": "Failed to fetch paymengt link details",
+            "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "data": {"error": str(e)}
+        }
