@@ -370,7 +370,6 @@ def get_closure_payment_link(subscription_id: str, service: RazorpayService = De
             return foreclosure_response
         payment_details_data = {
             "payment_id": payment['id'],
-            "order_id": ref_id,
             "amount": closure_amount_paise / 100,
             "currency": "INR",
             "status": payment['status'],

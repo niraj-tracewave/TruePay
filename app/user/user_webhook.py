@@ -8,8 +8,11 @@ from fastapi.responses import JSONResponse
 from config import app_config
 from fastapi import APIRouter, Request
 from services.razorpay_service import RazorpayService
+from common.utills_webhook import WebhookDBService
+
 razorpay_service_obj = RazorpayService(
                 app_config.RAZORPAY_KEY_ID, app_config.RAZORPAY_SECRET)
+webhook_dbService = WebhookDBService()
 
 router = APIRouter(prefix="/razorpay", tags=["RazorPay API's"])
 
@@ -80,19 +83,30 @@ async def razorpay_webhook(request: Request):
                             pass
                         sub_data.status = "authenticated"
                         session.commit()
-            case "payment.authenticated":
-                print("Payment Authenticated:", data)
-                print("Event:", event)
-            case "payment.captured":
-                print("Payment Captured:", data)
-                print("Event:", event)
-                payload = data.get("payload")
-                payment_id = payload["payment"]["entity"]["id"]
-                # Step 1: Fetch payment details from Razorpay
-                payment = razorpay_service_obj.fetch_payment_details(payment_id)
-                breakpoint()
-                # Step 2: This contains the payment link ID
-                payment_link_id = payment.get("payment_link_id")
+            
+            case "payment_link.paid":
+                try:
+                    # Extract entity safely
+                    entity = data.get("payload", {}).get("payment_link", {}).get("entity")
+                    if not entity:
+                        print("⚠ No payment link entity found in webhook payload.")
+                        pass
+
+                    payment_link_id = entity.get("id")
+                    if not payment_link_id:
+                        print("⚠ No payment link ID found in entity.")
+                        pass
+
+                    # Step 3: Update the payment link status in the database
+                    print(f" Payment Link ID: {payment_link_id}")
+                    # Example: update_payment_link_status(payment_link_id, "paid")
+                    webhook_dbService.update_payment_link_status(
+                        payment_link_id, "paid"
+                    )
+                    print(f" Payment link {payment_link_id} status updated to 'paid' in database.")
+
+                except Exception as e:
+                        print(f"Error processing payment_link.paid event: {e}")
 
             case _:
                 # logger.warning("Unhandled event: %s", event)
