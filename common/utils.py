@@ -85,7 +85,6 @@ def format_loan_documents(documents: list) -> list[dict]:
         )
     return formatted_docs
 
-from typing import List
 
 def format_plan_and_subscriptions(plans: List[any]) -> List[dict]:
     formatted_data = []
