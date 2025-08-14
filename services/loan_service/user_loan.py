@@ -195,7 +195,7 @@ class UserLoanService:
                              selectinload(LoanApplicant.bank_accounts),
                              selectinload(LoanApplicant.credit_score_range_rate),
                              selectinload(LoanApplicant.loan_disbursement),
-                             selectinload(LoanApplicant.plans).selectinload(Plan.subscriptions),
+                             selectinload(LoanApplicant.plans).selectinload(Plan.subscriptions).selectinload(Subscription.foreclosures).selectinload(ForeClosure.payment_details),
                              selectinload(LoanApplicant.approval_details)
                              )
                     .filter(LoanApplicant.created_by == user_id, LoanApplicant.is_deleted == False)
@@ -277,7 +277,7 @@ class UserLoanService:
                 "success": False,
                 "message": gettext("something_went_wrong"),
                 "status_code": status.HTTP_400_BAD_REQUEST,
-                "data": {}
+                "data": {"er": str(e)}
             }
             
     def get_loan_foreclosure_details(
