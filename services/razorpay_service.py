@@ -121,7 +121,7 @@ class RazorpayService:
             "skip": skip
         })
 
-    def create_payment_link(self, amount: int, currency: str, description: str, subscription_id: str):
+    def create_payment_link(self, amount: int, currency: str, description: str, subscription_id: str, callback_url:str):
         """
         Create a payment link for a specific amount and description.
         :param amount: Amount in paise (e.g., 10000 for ₹100).
@@ -143,7 +143,7 @@ class RazorpayService:
                 "subscription_id": subscription_id
             },
             "reminder_enable": True,
-            "callback_url": "https://truepay.co.in/",
+            "callback_url": callback_url,
             "callback_method": "get"
         })
 

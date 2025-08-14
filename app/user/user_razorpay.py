@@ -1,6 +1,6 @@
 import time
 from datetime import datetime
-from fastapi import Request
+from fastapi import Request, Query
 from fastapi import APIRouter, Depends
 from starlette import status
 from db_domains.db import DBSession
@@ -291,7 +291,9 @@ def get_subscription_invoices(subscription_id: str, service: RazorpayService = D
         }
         
 @router.get("/get-closure-payment-link/{subscription_id}")
-def get_closure_payment_link(subscription_id: str, service: RazorpayService = Depends(get_razorpay_service)):
+def get_closure_payment_link(subscription_id: str,
+                            callback_url: str = Query(..., description="URL to redirect after payment"),
+                             service: RazorpayService = Depends(get_razorpay_service)):
     
     try:
         sub = service.fetch_subscription(subscription_id)
@@ -327,7 +329,8 @@ def get_closure_payment_link(subscription_id: str, service: RazorpayService = De
                 amount=closure_amount_paise,
                 currency="INR",
                 description="Closure Payment",
-                subscription_id=ref_id
+                subscription_id=ref_id,
+                callback_url=callback_url
             )
         except Exception as e:
             # Check if the error message matches the "reference_id already exists" case
