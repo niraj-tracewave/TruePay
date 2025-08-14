@@ -345,13 +345,12 @@ class UserLoanService:
                 "other_charges": 0.0,
                 "total_charges": 0.0
             }
-
             # Process plan and subscription data
             plan_data = format_plan_and_subscriptions(loan_details.plans)
             if not plan_data:
                 return {
                     "success": False,
-                    "message": gettext("something_went_wrong"),
+                    "message": "E-mandate Process Is Not Done Yet!",
                     "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
                     "data": default_data
                 }
@@ -361,7 +360,7 @@ class UserLoanService:
                 app_logger.warning("No Razorpay plan ID found for the loan application")
                 return {
                     "success": False,
-                    "message": gettext("something_went_wrong"),
+                    "message": "No Razorpay plan ID found for the loan application",
                     "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
                     "data": default_data
                 }
@@ -372,7 +371,7 @@ class UserLoanService:
                 app_logger.error("Failed to fetch valid Razorpay plan data")
                 return {
                     "success": False,
-                    "message": gettext("something_went_wrong"),
+                    "message": "Failed to fetch valid Razorpay plan data",
                     "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
                     "data": default_data
                 }
@@ -381,7 +380,7 @@ class UserLoanService:
             if not subscriptions:
                 return {
                     "success": False,
-                    "message": gettext("something_went_wrong"),
+                    "message": "E-mandate Process Is Not Done Yet!",
                     "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
                     "data": default_data
                 }
@@ -392,7 +391,7 @@ class UserLoanService:
                 app_logger.warning("No Razorpay subscription ID found")
                 return {
                     "success": False,
-                    "message": gettext("something_went_wrong"),
+                    "message": "E-mandate Process Is Not Done Yet!",
                     "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
                     "data": default_data
                 }
@@ -402,7 +401,7 @@ class UserLoanService:
                 app_logger.error("Failed to fetch valid Razorpay subscription data")
                 return {
                     "success": False,
-                    "message": gettext("something_went_wrong"),
+                    "message": "Failed to fetch valid Razorpay subscription data",
                     "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
                     "data": default_data
                 }
