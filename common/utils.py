@@ -86,16 +86,35 @@ def format_loan_documents(documents: list) -> list[dict]:
     return formatted_docs
 
 
-def format_plan_and_subscriptions(plans: list) -> list[dict]:
+def format_plan_and_subscriptions(plans: List[any]) -> List[dict]:
     formatted_data = []
 
     for plan in plans:
         subscriptions_data = []
         for sub in plan.subscriptions:
+            foreclosure_data_list = []
+            for foreclosure in sub.foreclosures:
+                foreclosure_data = {
+                    "id": foreclosure.id,
+                    "subscription_id": foreclosure.subscription_id,
+                    "amount": foreclosure.amount,
+                    "status": foreclosure.status.value if hasattr(foreclosure.status, "value") else str(foreclosure.status),
+                }
+                if foreclosure.payment_details:
+                    payment_details = {
+                        "id": foreclosure.payment_details.id,
+                        "payment_id": foreclosure.payment_details.payment_id,
+                        "amount": foreclosure.payment_details.amount,
+                        "status": foreclosure.payment_details.status.value if hasattr(foreclosure.payment_details.status, "value") else str(foreclosure.payment_details.status),
+                        "created_at": foreclosure.payment_details.created_at.isoformat() if foreclosure.payment_details.created_at else None
+                    }
+                    foreclosure_data["payment_details"] = payment_details
+                foreclosure_data_list.append(foreclosure_data)
             subscriptions_data.append({
                 "subscription_id": sub.id,
                 "razorpay_subscription_id": sub.razorpay_subscription_id,
-                "status": sub.status,
+                "status": sub.status.value if hasattr(sub.status, "value") else str(sub.status),
+                "foreclosure_data": foreclosure_data_list
             })
 
         formatted_data.append({
