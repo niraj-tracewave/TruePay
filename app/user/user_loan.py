@@ -60,6 +60,21 @@ def get_loan_application_details(request: Request, loan_application_id: str):
     )
 
 
+@router.get("/get-loan-foreclosure-details/{loan_application_id}", summary="Get Loan Foreclosure Details")
+def get_loan_foreclosure_details(request: Request, loan_application_id: str):
+    user_state = getattr(request.state, "user", None)
+    response = loan_service.get_loan_foreclosure_details(
+        user_id=user_state.get("id"),
+        loan_application_id=loan_application_id
+    )
+
+    return ApiResponse.create_response(
+        success=response.get("success"),
+        message=response.get("message"),
+        status_code=response.get("status_code", status.HTTP_200_OK),
+        data=response.get("data")
+    )
+
 @router.post("/upload-file", summary="Upload Documents")
 async def upload_file(request: Request, file_type: UploadFileType = Form(...), files: List[UploadFile] = File(...)):
     user = getattr(request.state, "user", None)
