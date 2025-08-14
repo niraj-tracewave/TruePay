@@ -326,32 +326,34 @@ class SurpassService:
 
 
             app_logger.debug(f"[bank_verifications] Sending payload to surpass API: {bank_verification_payload_data}")
+            
+            #NOTE: Commented out the actual API call to Surpass for bank verification
+            # response_data, request_status_code, request_error = await self.surpass_request_obj.make_request(
+            #     endpoint="bank-verification/", method="POST", data=bank_verification_payload_data
+            # )
 
-            response_data, request_status_code, request_error = await self.surpass_request_obj.make_request(
-                endpoint="bank-verification/", method="POST", data=bank_verification_payload_data
-            )
+            # app_logger.info(
+            #     f"[bank_verifications] Received response from surpass API: status_code={request_status_code}"
+            # )
 
-            app_logger.info(
-                f"[bank_verifications] Received response from surpass API: status_code={request_status_code}"
-            )
+            # if request_status_code != 200:
+            #     app_logger.info(f"Error Data => {response_data}")
+            #     error_message = request_error
+            #     if response_data:
+            #         error_data = response_data.get("data")
+            #         if error_data and error_data.get("remarks"):
+            #             error_message = error_data.get("remarks")
 
-            if request_status_code != 200:
-                app_logger.info(f"Error Data => {response_data}")
-                error_message = request_error
-                if response_data:
-                    error_data = response_data.get("data")
-                    if error_data and error_data.get("remarks"):
-                        error_message = error_data.get("remarks")
+            #     app_logger.warning(f"[bank_verifications] Verification failed: {error_message}")
+            #     return {
+            #         "success": False,
+            #         "message": error_message,
+            #         "status_code": request_status_code,
+            #         "data": {}
+            #     }
 
-                app_logger.warning(f"[bank_verifications] Verification failed: {error_message}")
-                return {
-                    "success": False,
-                    "message": error_message,
-                    "status_code": request_status_code,
-                    "data": {}
-                }
-
-            data = response_data.get("data", {})
+            # data = response_data.get("data", {})
+            data = {}
 
             bank_data = {
                 "user_id": bank_detail.user_id,
@@ -392,7 +394,9 @@ class SurpassService:
                 "success": False,
                 "message": "Error validating bank details",
                 "status_code": status.HTTP_400_BAD_REQUEST,
-                "data": {}
+                "data": {
+                    "error": str(e)
+                }
             }
 
     async def validate_aadhar_card(self, user_id, aadhar_details: AadharCardDetails):
