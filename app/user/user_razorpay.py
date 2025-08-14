@@ -296,6 +296,7 @@ def get_closure_payment_link(subscription_id: str,
                              service: RazorpayService = Depends(get_razorpay_service)):
     
     try:
+        EMI_FETCHED =  False
         sub = service.fetch_subscription(subscription_id)
         if not sub:
             return JSONResponse(
@@ -322,16 +323,65 @@ def get_closure_payment_link(subscription_id: str,
         amount_per_emi = plan['item']['amount']
         remaining_emis = max(0, sub['total_count'] - sub['paid_count'])
         closure_amount_paise = amount_per_emi * remaining_emis
+        
+        #NOTE: Logic
+        # step -1 Fetch Subscription Details
+        filters = [
+            Subscription.razorpay_subscription_id == subscription_id,
+            Subscription.is_deleted == False
+        ]
+        with DBSession() as session:
+            subscription = (
+                session.query(Subscription)
+                .options(
+                    selectinload(Subscription.plan),  # Load Plan details
+                    selectinload(Subscription.plan).selectinload(Plan.applicant),  # Load LoanApplicant via Plan
+                     selectinload(Subscription.plan).selectinload(Plan.applicant).selectinload(LoanApplicant.approval_details) 
+                )
+                .filter(*filters)
+                .first()
+            )
+            
+            if subscription:
+                # Access loan details
+                loan = subscription.plan.applicant if subscription.plan else None
+                if loan:
+                    print(f"Loan ID: {loan.id}, Details: {loan.__dict__}")
+                    loan_approval_detail = loan.approval_details[0] if loan else None   
+                    user_accepted_amount = loan_approval_detail.user_accepted_amount
+                    approved_interest_rate = loan_approval_detail.approved_interest_rate
+                    approved_tenure_months = loan_approval_detail.approved_tenure_months
+                    approved_processing_fee = loan_approval_detail.approved_processing_fee
+
+                    # Step 5: Calculate EMI
+                    emi_result = calculate_emi_schedule(
+                        loan_amount=user_accepted_amount,
+                        tenure_months=approved_tenure_months,
+                        annual_interest_rate=approved_interest_rate,
+                        processing_fee=approved_processing_fee,
+                        is_fee_percentage=True,
+                        loan_type=loan.loan_type
+                    )
+                    if emi_result:
+                        EMI_FETCHED = True
+                        # work further for Foreclosure processing
+                else:
+                    print("No loan associated with this subscription")
+            else:
+                print("Subscription not found")
+        
 
         try:
-            ref_id = f"{sub['id']}+{int(time.time() * 1000)}"
-            payment = service.create_payment_link(
-                amount=closure_amount_paise,
-                currency="INR",
-                description="Closure Payment",
-                subscription_id=ref_id,
-                callback_url=callback_url
-            )
+            if EMI_FETCHED:
+                # NOTE: closure Related Data Will Be Calculated here 
+                ref_id = f"{sub['id']}+{int(time.time() * 1000)}"
+                payment = service.create_payment_link(
+                    amount=closure_amount_paise,
+                    currency="INR",
+                    description="Closure Payment",
+                    subscription_id=ref_id,
+                    callback_url=callback_url
+                )
         except Exception as e:
             # Check if the error message matches the "reference_id already exists" case
             error_message = str(e)
