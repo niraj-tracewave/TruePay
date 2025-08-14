@@ -340,7 +340,7 @@ class UserLoanService:
             default_data = {
                 "foreclosure_amount": 0.0,
                 "principal_amount": 0.0,
-                "interest_due": 0.0,
+                "calculate_foreclosure_details": 0.0,
                 "processing_fee": 0.0,
                 "other_charges": 0.0,
                 "total_charges": 0.0

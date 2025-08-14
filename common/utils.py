@@ -338,14 +338,14 @@ def calculate_foreclosure_details(
     effective_processing_fee: float
 ) -> Dict[str, float]:
     """Calculate foreclosure details based on Razorpay plan and subscription data."""
-    amount = razorpay_plan_data.get('item', {}).get('amount', 0)
+    amount = razorpay_plan_data.get('item', {}).get('amount', 0.0)
     total_count = razorpay_sub_data.get('total_count', 0)
     paid_count = razorpay_sub_data.get('paid_count', 0)
     remaining_count = razorpay_sub_data.get('remaining_count', 0)
 
     foreclosure_amount = ((total_count - paid_count) * amount) / 100
-    principal_amount = loan_details.approved_loan or 0
-    interest_due = foreclosure_amount - principal_amount
+    principal_amount = loan_details.approval_details[0].user_accepted_amount or 0.0
+    foreclosure_processing_amount = 0.0
     processing_fee = (effective_processing_fee * principal_amount) / 100
     other_charges = (processing_fee * int(app_config.GST_CHARGE)) / 100
     total_charges = processing_fee + other_charges
@@ -353,7 +353,7 @@ def calculate_foreclosure_details(
     return {
         "foreclosure_amount": foreclosure_amount,
         "principal_amount": principal_amount,
-        "interest_due": interest_due,
+        "foreclosure_processing_amount": foreclosure_processing_amount,
         "processing_fee": processing_fee,
         "other_charges": other_charges,
         "total_charges": total_charges
