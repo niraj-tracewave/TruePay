@@ -7,11 +7,12 @@ from fastapi import UploadFile
 from passlib.context import CryptContext
 from starlette import status
 
+from config import app_config
 from app_logging import app_logger
 from common.cache_string import gettext
 from models.user import User, UserDocument
 from db_domains.db_interface import DBInterface
-from models.loan import EmiScheduleDate
+from models.loan import EmiScheduleDate, LoanApplicant
 
 
 def format_user_response(user: User, documents: Optional[list[UserDocument]] = None) -> dict:
@@ -329,3 +330,31 @@ def get_latest_paid_at(razorpay_sub_invoice_detail: dict) -> int | None:
     # Find the invoice with the max 'paid_at' timestamp
     latest_invoice = max(paid_invoices, key=lambda x: x["paid_at"])
     return latest_invoice["paid_at"]
+
+def calculate_foreclosure_details(
+    razorpay_plan_data: Dict[str, Any],
+    razorpay_sub_data: Dict[str, Any],
+    loan_details: LoanApplicant,
+    effective_processing_fee: float
+) -> Dict[str, float]:
+    """Calculate foreclosure details based on Razorpay plan and subscription data."""
+    amount = razorpay_plan_data.get('item', {}).get('amount', 0)
+    total_count = razorpay_sub_data.get('total_count', 0)
+    paid_count = razorpay_sub_data.get('paid_count', 0)
+    remaining_count = razorpay_sub_data.get('remaining_count', 0)
+
+    foreclosure_amount = ((total_count - paid_count) * amount) / 100
+    principal_amount = loan_details.approved_loan or 0
+    interest_due = foreclosure_amount - principal_amount
+    processing_fee = (effective_processing_fee * principal_amount) / 100
+    other_charges = (processing_fee * int(app_config.GST_CHARGE)) / 100
+    total_charges = processing_fee + other_charges
+
+    return {
+        "foreclosure_amount": foreclosure_amount,
+        "principal_amount": principal_amount,
+        "interest_due": interest_due,
+        "processing_fee": processing_fee,
+        "other_charges": other_charges,
+        "total_charges": total_charges
+    }

@@ -16,7 +16,7 @@ from common.common_services.email_service import EmailService
 from common.email_html_utils import build_loan_email_bodies
 from common.enums import DocumentType, IncomeProofType, LoanType, UploadFileType, LoanStatus
 from common.utils import (calculate_emi_schedule, format_loan_documents,
-    format_plan_and_subscriptions, unix_to_yyyy_mm_dd, validate_file_type, get_latest_paid_at)
+    format_plan_and_subscriptions, unix_to_yyyy_mm_dd, validate_file_type, get_latest_paid_at, calculate_foreclosure_details)
 from config import app_config
 from db_domains import Base
 from db_domains.db import DBSession
@@ -278,6 +278,161 @@ class UserLoanService:
                 "message": gettext("something_went_wrong"),
                 "status_code": status.HTTP_400_BAD_REQUEST,
                 "data": {}
+            }
+            
+    def get_loan_foreclosure_details(
+        self,
+        loan_application_id: str,
+        user_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Fetch foreclosure details for a loan application.
+
+        Args:
+            loan_application_id (str): The ID of the loan application.
+            user_id (Optional[str]): The ID of the user (optional).
+
+        Returns:
+            Dict[str, Any]: A dictionary containing success status, message, status code, and foreclosure data.
+        """
+        try:
+            app_logger.info(
+                f"Fetching foreclosure details for user: {user_id}, loan_application_id: {loan_application_id}"
+            )
+
+            # Define query filters
+            filters = [
+                LoanApplicant.id == loan_application_id,
+                LoanApplicant.is_deleted == False
+            ]
+            if user_id:
+                filters.append(LoanApplicant.created_by == user_id)
+
+            # Query loan details with related data
+            with DBSession() as session:
+                loan_details = (
+                    session.query(LoanApplicant)
+                    .options(
+                        selectinload(LoanApplicant.documents),
+                        selectinload(LoanApplicant.approval_details),
+                        selectinload(LoanApplicant.credit_score_range_rate),
+                        selectinload(LoanApplicant.loan_disbursement),
+                        selectinload(LoanApplicant.plans)
+                        .selectinload(Plan.subscriptions)
+                        .selectinload(Subscription.foreclosures)
+                        .selectinload(ForeClosure.payment_details),
+                        with_loader_criteria(LoanDocument, LoanDocument.is_deleted == False)
+                    )
+                    .filter(*filters)
+                    .first()
+                )
+
+                if not loan_details:
+                    app_logger.error(gettext('not_found').format('Loan Application'))
+                    return {
+                    "success": False,
+                    "message": gettext("something_went_wrong"),
+                    "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    "data": default_data
+                }
+
+            # Initialize default response data
+            default_data = {
+                "foreclosure_amount": 0.0,
+                "principal_amount": 0.0,
+                "interest_due": 0.0,
+                "processing_fee": 0.0,
+                "other_charges": 0.0,
+                "total_charges": 0.0
+            }
+
+            # Process plan and subscription data
+            plan_data = format_plan_and_subscriptions(loan_details.plans)
+            if not plan_data:
+                return {
+                    "success": False,
+                    "message": gettext("something_went_wrong"),
+                    "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    "data": default_data
+                }
+            current_plan = plan_data[0]
+            plan_id = current_plan.get("razorpay_plan_id")
+            if not plan_id:
+                app_logger.warning("No Razorpay plan ID found for the loan application")
+                return {
+                    "success": False,
+                    "message": gettext("something_went_wrong"),
+                    "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    "data": default_data
+                }
+
+            # Fetch Razorpay plan and subscription data
+            razorpay_plan_data = razorpay_service_obj.fetch_plan(plan_id=plan_id)
+            if not razorpay_plan_data or 'item' not in razorpay_plan_data:
+                app_logger.error("Failed to fetch valid Razorpay plan data")
+                return {
+                    "success": False,
+                    "message": gettext("something_went_wrong"),
+                    "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    "data": default_data
+                }
+
+            subscriptions = current_plan.get("subscriptions", [])
+            if not subscriptions:
+                return {
+                    "success": False,
+                    "message": gettext("something_went_wrong"),
+                    "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    "data": default_data
+                }
+
+            current_subscription = subscriptions[0]
+            razorpay_sub_id = current_subscription.get("razorpay_subscription_id")
+            if not razorpay_sub_id:
+                app_logger.warning("No Razorpay subscription ID found")
+                return {
+                    "success": False,
+                    "message": gettext("something_went_wrong"),
+                    "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    "data": default_data
+                }
+
+            razorpay_sub_data = razorpay_service_obj.fetch_subscription(subscription_id=razorpay_sub_id)
+            if not razorpay_sub_data:
+                app_logger.error("Failed to fetch valid Razorpay subscription data")
+                return {
+                    "success": False,
+                    "message": gettext("something_went_wrong"),
+                    "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    "data": default_data
+                }
+
+            # Calculate foreclosure details
+            effective_processing_fee = self.get_effective_processing_fee(loan_details)
+            foreclosure_details = calculate_foreclosure_details(
+                razorpay_plan_data,
+                razorpay_sub_data,
+                loan_details,
+                effective_processing_fee
+            )
+
+            return {
+                "success": True,
+                "message": gettext("retrieved_successfully").format("Foreclousure Details"),
+                "status_code": status.HTTP_200_OK,
+                "data": foreclosure_details
+            }
+
+        except Exception as e:
+            app_logger.error(
+                f"{gettext('error_fetching_data_from_db').format('Loan Application')} {user_id}: {str(e)}",
+                exc_info=True
+            )
+            return {
+                "success": False,
+                "message": gettext("something_went_wrong"),
+                "status_code": status.HTTP_400_BAD_REQUEST,
+                "data": {"error": str(e)}
             }
 
     def get_loan_application_details(self, loan_application_id: str, user_id: Optional[str] = None) -> Dict[str, Any]:
