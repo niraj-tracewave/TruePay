@@ -1,11 +1,11 @@
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import Request, Query
 from fastapi import APIRouter, Depends
 from starlette import status
 from db_domains.db import DBSession
 from sqlalchemy.orm import selectinload
-from models.loan import LoanApplicant
+from models.loan import LoanApplicant, EmiScheduleDate
 from models.razorpay import Plan, Subscription
 from services.plan_service import PlanService
 from services.subscription_service import SubscriptionService
@@ -161,6 +161,42 @@ def create_emi_mandate(
                 }
 
             # Step 7: Create Subscription
+            emi_schedule_date = 5
+            try:
+                emi_schedule_db_interface = DBInterface(EmiScheduleDate)
+                existing_entry = emi_schedule_db_interface.read_single_by_fields(
+                        fields=[
+                            EmiScheduleDate.emi_schedule_loan_type == loan_details.loan_type,
+                            EmiScheduleDate.is_deleted == False,
+                        ]
+                    )
+                emi_schedule_date = int(existing_entry.emi_schedule_date) if existing_entry else 5
+            except Exception as e:
+                print(f"Error fetching EMI schedule date: {e}")
+                
+            # NOTE: calculation for start_at date in unix value
+            # Get current date
+            current_date = datetime.now()
+
+            # Calculate the first day of the next month
+            if current_date.month == 12:
+                next_month = 1
+                next_year = current_date.year + 1
+            else:
+                next_month = current_date.month + 1
+                next_year = current_date.year
+
+            # Create datetime object for the emi_schedule_date of next month
+            try:
+                next_month_date = datetime(next_year, next_month, emi_schedule_date)
+            except ValueError:
+                # Handle case where emi_schedule_date is invalid for the month (e.g., 31st in February)
+                # Use the last day of the month instead
+                next_month_first = datetime(next_year, next_month, 1)
+                next_month_date = (next_month_first.replace(day=1, month=next_month % 12 + 1, year=next_year if next_month < 12 else next_year + 1) - timedelta(days=1))
+
+            # Convert to Unix timestamp (seconds since epoch)
+            unix_timestamp = int(time.mktime(next_month_date.timetuple()))
             created_sub = sub_service.add_subscription(
                 plan_id=created_plan.id,
                 user_id=user_state["id"],
@@ -168,7 +204,8 @@ def create_emi_mandate(
                     "plan_id": created_plan.razorpay_plan_id,
                     "total_count": approved_tenure_months,
                     "quantity": 1,
-                    "customer_notify": 1
+                    "customer_notify": 1,
+                    "start_at": unix_timestamp
                 }
             )
             if not created_sub:
