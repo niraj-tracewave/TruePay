@@ -76,7 +76,7 @@ class AdminLoanService(UserLoanService):
             else:
                 final_offset = offset
           
-            loans = self.db_interface.read_all_by_filters_with_joins(
+            loans, total_loan_count = self.db_interface.read_all_by_filters_with_joins(
                 filter_expr=filter_expr,
                 order_by=order_column,
                 order_direction=order_direction,
@@ -141,8 +141,7 @@ class AdminLoanService(UserLoanService):
                 "status_code": status.HTTP_200_OK if loan_list else status.HTTP_404_NOT_FOUND,
                  "data": {
                     "loan_applications": loan_list,
-                    "total_db_loans": total_loans,
-                    "total_count":total_loans
+                    "total_count":total_loan_count
                 }
             }
 

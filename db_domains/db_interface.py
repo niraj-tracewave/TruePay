@@ -155,9 +155,11 @@ class DBInterface:
                 order = desc(order_by) if order_direction == "desc" else asc(order_by)
                 query = query.order_by(order)
 
+            total_count = query.count()
             query = query.offset(offset).limit(limit)
 
-            return query.all()
+
+            return query.all(), total_count
         except Exception as e:
             raise Exception(f"Error reading with filters in {self.db_class.__name__}: {str(e)}")
         finally:

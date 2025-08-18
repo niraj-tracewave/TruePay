@@ -480,7 +480,7 @@ class AdminAuthService(UserAuthService):
             else:
                 final_offset = offset
 
-            users = self.db_interface.read_all_by_filters_with_joins(
+            users, total_count = self.db_interface.read_all_by_filters_with_joins(
                 filter_expr=filter_expr,
                 order_by=order_column,
                 order_direction=order_direction,
@@ -502,7 +502,7 @@ class AdminAuthService(UserAuthService):
                 "status_code": status.HTTP_200_OK if user_list else status.HTTP_404_NOT_FOUND,
                 "data": {
                     "user": user_list,
-                    "total_count": total_users,
+                    "total_count": total_count,
                 }
             }
 
