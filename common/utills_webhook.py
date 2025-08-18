@@ -40,6 +40,7 @@ class WebhookDBService:
                 return False
 
             with DBSession() as session:
+                #NOTE: Fetch Applicant details and change the status of the particular loan
                 payment_data = (
                     session.query(PaymentDetails)
                     .filter(
@@ -69,6 +70,10 @@ class WebhookDBService:
                         subscription.status = "cancelled"
                         print(
                             f"Subscription {razorpay_subscription_id} status set to 'cancelled'")
+                        # change loan status
+                        loan = payment_data.foreclosure.subscription.plan.applicant
+                        if loan:
+                            loan.status = "COMPLETED"
 
                 else:
                     print(

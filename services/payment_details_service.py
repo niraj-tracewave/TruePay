@@ -34,7 +34,6 @@ class PaymentDetailsService:
             }
 
         except Exception as e:
-            breakpoint()
             app_logger.error(
                 f"Error creating payment details entry: {str(e)}", exc_info=True)
             return {
