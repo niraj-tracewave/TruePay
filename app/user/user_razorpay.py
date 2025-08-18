@@ -390,6 +390,8 @@ def get_closure_payment_link(
                 paid_principal_amt += emi.get("principal_paid", 0.0)
                 interest_paid_amt += emi.get("interest_paid", 0.0)
                 foreclosure_amt = emi.get("balance", 0.0)
+        elif paid_based_on_data == 0:
+            foreclosure_amt = user_accepted_amount
 
         # If foreclosure_amt is still 0 and remaining_count > 0, set to full loan amount or handle appropriately
         if foreclosure_amt == 0.0 and sub['remaining_count'] > 0:
