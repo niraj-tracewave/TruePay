@@ -289,30 +289,23 @@ def get_subscription_invoices(subscription_id: str, service: RazorpayService = D
             "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
             "data": {"error": str(e)}
         }
-        
+
 @router.get("/get-closure-payment-link/{subscription_id}")
-def get_closure_payment_link(subscription_id: str,
-                            callback_url: str = Query(..., description="URL to redirect after payment"),
-                             service: RazorpayService = Depends(get_razorpay_service)):
-    
+def get_closure_payment_link(
+    subscription_id: str,
+    callback_url: str = Query(..., description="URL to redirect after payment"),
+    service: RazorpayService = Depends(get_razorpay_service)
+):
     try:
-        EMI_FETCHED =  False
+        # Step 1: Fetch subscription from Razorpay
         sub = service.fetch_subscription(subscription_id)
         if not sub:
             return JSONResponse(
                 content={"success": False, "message": "Subscription not found", "data": {}},
                 status_code=status.HTTP_404_NOT_FOUND
             )
-        #NOTE: Check the status == "active" IF Condition is --> If 1 or more EMIs needs to be paid before foreclosure
-        # if sub['status'] != 'active':
-        #     return {
-        #         "success": False,
-        #         "message": "Subscription is not active",
-        #         "status_code": status.HTTP_400_BAD_REQUEST,
-        #         "data": {}
-        #     }
-        
-        # step-2 Fetch Plan details
+
+        # Step 2: Fetch plan from Razorpay
         plan = service.fetch_plan(sub['plan_id'])
         if not plan:
             return JSONResponse(
@@ -320,85 +313,93 @@ def get_closure_payment_link(subscription_id: str,
                 status_code=status.HTTP_404_NOT_FOUND
             )
 
-        amount_per_emi = plan['item']['amount']
-        remaining_emis = max(0, sub['total_count'] - sub['paid_count'])
-        closure_amount_paise = amount_per_emi * remaining_emis
-        
-        #NOTE: Logic
-        # step -1 Fetch Subscription Details
+        # Step 3: Fetch local subscription details with related entities
         filters = [
             Subscription.razorpay_subscription_id == subscription_id,
             Subscription.is_deleted == False
         ]
         with DBSession() as session:
-            subscription = (
+            local_subscription = (
                 session.query(Subscription)
                 .options(
-                    selectinload(Subscription.plan),  # Load Plan details
-                    selectinload(Subscription.plan).selectinload(Plan.applicant),  # Load LoanApplicant via Plan
-                     selectinload(Subscription.plan).selectinload(Plan.applicant).selectinload(LoanApplicant.approval_details) 
+                    selectinload(Subscription.plan),
+                    selectinload(Subscription.plan).selectinload(Plan.applicant),
+                    selectinload(Subscription.plan).selectinload(Plan.applicant).selectinload(LoanApplicant.approval_details)
                 )
                 .filter(*filters)
                 .first()
             )
-            
-            if subscription:
-                # Access loan details
-                loan = subscription.plan.applicant if subscription.plan else None
-                if loan:
-                    loan_approval_detail = loan.approval_details[0] if loan else None   
-                    user_accepted_amount = loan_approval_detail.user_accepted_amount
-                    approved_interest_rate = loan_approval_detail.approved_interest_rate
-                    approved_tenure_months = loan_approval_detail.approved_tenure_months
-                    approved_processing_fee = loan_approval_detail.approved_processing_fee
 
-                    # Step 5: Calculate EMI
-                    emi_result = calculate_emi_schedule(
-                        loan_amount=user_accepted_amount,
-                        tenure_months=approved_tenure_months,
-                        annual_interest_rate=approved_interest_rate,
-                        processing_fee=approved_processing_fee,
-                        is_fee_percentage=True,
-                        loan_type=loan.loan_type
-                    )
-                    if emi_result:
-                        EMI_FETCHED = True
-                else:
-                    print("No loan associated with this subscription")
-            else:
-                print("Subscription not found")
-        try:
-            if EMI_FETCHED:
-                required_sub_keys = ['paid_count', 'total_count', 'remaining_count']
-                if not all(key in sub for key in required_sub_keys):
-                    raise KeyError(f"Missing required keys in 'sub': {required_sub_keys}")
+            if not local_subscription:
+                return JSONResponse(
+                    content={"success": False, "message": "Subscription not found in DB", "data": {}},
+                    status_code=status.HTTP_404_NOT_FOUND
+                )
 
-                paid_based_on_data = sub['total_count'] - sub['remaining_count']
+            # Access loan details
+            loan = local_subscription.plan.applicant if local_subscription.plan else None
+            if not loan or not loan.approval_details:
+                return JSONResponse(
+                    content={"success": False, "message": "No loan or approval details associated with this subscription", "data": {}},
+                    status_code=status.HTTP_400_BAD_REQUEST
+                )
 
-                if paid_based_on_data < 0:
-                    raise ValueError("'paid_based_on_data' cannot be negative")
+            loan_approval_detail = loan.approval_details[0]
+            user_accepted_amount = loan_approval_detail.user_accepted_amount
+            approved_interest_rate = loan_approval_detail.approved_interest_rate
+            approved_tenure_months = loan_approval_detail.approved_tenure_months
+            approved_processing_fee = loan_approval_detail.approved_processing_fee
 
-                paid_principal_amt = 0.0
-                interest_paid_amt = 0.0
-                foreclosure_amt = 0.0 
+            # Step 4: Calculate EMI schedule
+            emi_result = calculate_emi_schedule(
+                loan_amount=user_accepted_amount,
+                tenure_months=approved_tenure_months,
+                annual_interest_rate=approved_interest_rate,
+                processing_fee=approved_processing_fee,
+                is_fee_percentage=True,
+                loan_type=loan.loan_type
+            )
+            if not emi_result:
+                return JSONResponse(
+                    content={"success": False, "message": "Failed to calculate EMI schedule", "data": {}},
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
-                if paid_based_on_data > 0:
-                    schedule = emi_result.get("data", {}).get("schedule", [])
+        # Step 5: Validate and compute foreclosure amount from EMI schedule
+        required_sub_keys = ['paid_count', 'total_count', 'remaining_count']
+        if not all(key in sub for key in required_sub_keys):
+            raise KeyError(f"Missing required keys in 'sub': {required_sub_keys}")
 
-                    # Check if schedule has enough entries to avoid IndexError
-                    if len(schedule) < paid_based_on_data:
-                        raise IndexError(f"Schedule length ({len(schedule)}) is less than required ({paid_based_on_data})")
+        paid_based_on_data = sub['total_count'] - sub['remaining_count']
+        if paid_based_on_data < 0:
+            raise ValueError("'paid_based_on_data' cannot be negative")
 
-                    for emi in schedule[:paid_based_on_data]:
-                        if not isinstance(emi, dict):
-                            raise TypeError("EMI entry must be a dictionary")
+        paid_principal_amt = 0.0
+        interest_paid_amt = 0.0
+        foreclosure_amt = 0.0
 
-                        paid_principal_amt += emi.get("principal_paid", 0.0)
-                        interest_paid_amt += emi.get("interest_paid", 0.0)
-                        foreclosure_amt = emi.get("balance", 0.0) 
+        if paid_based_on_data > 0:
+            schedule = emi_result.get("data", {}).get("schedule", [])
+            if len(schedule) < paid_based_on_data:
+                raise IndexError(f"Schedule length ({len(schedule)}) is less than required ({paid_based_on_data})")
 
-                # If no paid EMIs, foreclosure_amt remains 0.0 (as per original logic)  
-                ref_id = f"{sub['id']}+{int(time.time() * 1000)}"
+            for emi in schedule[:paid_based_on_data]:
+                if not isinstance(emi, dict):
+                    raise TypeError("EMI entry must be a dictionary")
+
+                paid_principal_amt += emi.get("principal_paid", 0.0)
+                interest_paid_amt += emi.get("interest_paid", 0.0)
+                foreclosure_amt = emi.get("balance", 0.0)
+
+        # If foreclosure_amt is still 0 and remaining_count > 0, set to full loan amount or handle appropriately
+        if foreclosure_amt == 0.0 and sub['remaining_count'] > 0:
+            foreclosure_amt = user_accepted_amount  # Fallback to principal if no payments
+
+        # Step 6: Create unique reference ID and payment link
+        ref_id = f"{sub['id']}+{int(time.time() * 1000)}"
+        max_retries = 3  # To handle duplicate reference_id
+        for attempt in range(max_retries):
+            try:
                 payment = service.create_payment_link(
                     amount=foreclosure_amt * 100,
                     currency="INR",
@@ -406,44 +407,37 @@ def get_closure_payment_link(subscription_id: str,
                     subscription_id=ref_id,
                     callback_url=callback_url
                 )
-        except Exception as e:
-            # Check if the error message matches the "reference_id already exists" case
-            error_message = str(e)
-            if "payment link with given reference_id" in error_message and "already exists" in error_message:
-                # Handle the duplicate reference_id error specifically
-                print("Duplicate reference_id detected. Please generate a unique reference_id.")
-                # You can either generate a new reference_id here or return an error response
-            else:
-                # For other exceptions, raise or handle differently
-                raise
-        else:
-            # No error, continue normally
-            print("Payment link created successfully:", payment)
-        if not payment:
-            return JSONResponse(
-                content={"success": False, "message": "Failed to create payment link", "data": {}},
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        #NOTE: Update the foreclosure details with the payment link [ ForeClosure, PaymentDetails ]
-        sub_db_interface = DBInterface(Subscription)
-        existing_sub = sub_db_interface.read_single_by_fields([
-            Subscription.razorpay_subscription_id == sub["id"],
-            Subscription.is_deleted == False
-        ])
-        if not existing_sub:
-            return JSONResponse(
-                content={"success": False, "message": "Subscription not found in DB", "data": {}},
-                status_code=status.HTTP_404_NOT_FOUND
-            )
+                if not payment:
+                    raise ValueError("Failed to create payment link")
+                break  # Success, exit retry loop
+            except Exception as e:
+                error_message = str(e)
+                if "payment link with given reference_id" in error_message and "already exists" in error_message:
+                    if attempt < max_retries - 1:
+                        ref_id = f"{sub['id']}+{int(time.time() * 1000)}"  # Regenerate ref_id
+                        continue
+                    else:
+                        return JSONResponse(
+                            content={"success": False, "message": "Failed to create unique payment link after retries", "data": {}},
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+                        )
+                else:
+                    raise  # Rethrow other exceptions
+
+        # Step 7: Create foreclosure and payment details in DB
         foreclosure_data = {
-            "subscription_id": existing_sub.id,
-            "amount": foreclosure_amt ,
+            "subscription_id": local_subscription.id,
+            "amount": foreclosure_amt,
             "reason": "Subscription Closure",
             "status": "pending"
         }
         foreclosure_response = foreclosure_service.create_foreclosure(foreclosure_data)
         if not foreclosure_response['success']:
-            return foreclosure_response
+            return JSONResponse(
+                content=foreclosure_response,
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
         payment_details_data = {
             "payment_id": payment['id'],
             "amount": foreclosure_amt,
@@ -454,20 +448,42 @@ def get_closure_payment_link(subscription_id: str,
         }
         payment_details_response = payment_details_service.create_payment_details(payment_details_data)
         if not payment_details_response['success']:
-            return payment_details_response
-        #NOTE: Afterwards
-        #Track the payment status if Success --> Cancel The subscription and update the foreclosure status     
+            return JSONResponse(
+                content=payment_details_response,
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        # Step 8: Return success
         return JSONResponse(
             content={"success": True, "message": "Payment Link Created Successfully!", "data": {"payment": payment}},
             status_code=status.HTTP_200_OK
         )
 
+    except KeyError as ke:
+        return JSONResponse(
+            content={"success": False, "message": f"Key error: {str(ke)}", "data": {}},
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+    except ValueError as ve:
+        return JSONResponse(
+            content={"success": False, "message": f"Value error: {str(ve)}", "data": {}},
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+    except IndexError as ie:
+        return JSONResponse(
+            content={"success": False, "message": f"Index error: {str(ie)}", "data": {}},
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+    except TypeError as te:
+        return JSONResponse(
+            content={"success": False, "message": f"Type error: {str(te)}", "data": {}},
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
     except Exception as e:
         return JSONResponse(
             content={"success": False, "message": "Internal Server Error", "data": {"error": str(e)}},
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-
         
 @router.get("/get-payment-details/{payment_id}")
 def get_payment_details(payment_id: str, service: RazorpayService = Depends(get_razorpay_service)):
