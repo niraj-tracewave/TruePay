@@ -357,6 +357,7 @@ def calculate_foreclosure_details(
     interest_paid_amt = 0.0
     foreclosure_amt = 0.0
     paid_based_on_data = razorpay_sub_data['total_count'] - razorpay_sub_data['remaining_count']
+    principal_amount = loan_details.approval_details[0].user_accepted_amount or 0.0
     if paid_based_on_data > 0:
         schedule = emi_result.get("data", {}).get("schedule", [])
         if len(schedule) < paid_based_on_data:
@@ -369,7 +370,8 @@ def calculate_foreclosure_details(
             paid_principal_amt += emi.get("principal_paid", 0.0)
             interest_paid_amt += emi.get("interest_paid", 0.0)
             foreclosure_amt = emi.get("balance", 0.0)
-    principal_amount = loan_details.approval_details[0].user_accepted_amount or 0.0
+    elif paid_based_on_data == 0:
+        foreclosure_amt = principal_amount
     foreclosure_processing_amount = 0.0
     processing_fee = (effective_processing_fee * principal_amount) / 100
     other_charges = (processing_fee * int(app_config.GST_CHARGE)) / 100
