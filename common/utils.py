@@ -338,12 +338,37 @@ def calculate_foreclosure_details(
     effective_processing_fee: float
 ) -> Dict[str, float]:
     """Calculate foreclosure details based on Razorpay plan and subscription data."""
-    amount = razorpay_plan_data.get('item', {}).get('amount', 0.0)
-    total_count = razorpay_sub_data.get('total_count', 0)
-    paid_count = razorpay_sub_data.get('paid_count', 0)
-    remaining_count = razorpay_sub_data.get('remaining_count', 0)
+    loan_approval_detail = loan_details.approval_details[0]
+    user_accepted_amount = loan_approval_detail.user_accepted_amount
+    approved_interest_rate = loan_approval_detail.approved_interest_rate
+    approved_tenure_months = loan_approval_detail.approved_tenure_months
+    approved_processing_fee = loan_approval_detail.approved_processing_fee
 
-    foreclosure_amount = ((total_count - paid_count) * amount) / 100
+    emi_result = calculate_emi_schedule(
+                loan_amount=user_accepted_amount,
+                tenure_months=approved_tenure_months,
+                annual_interest_rate=approved_interest_rate,
+                processing_fee=approved_processing_fee,
+                is_fee_percentage=True,
+                loan_type=loan_details.loan_type
+            )
+    
+    paid_principal_amt = 0.0
+    interest_paid_amt = 0.0
+    foreclosure_amt = 0.0
+    paid_based_on_data = razorpay_sub_data['total_count'] - razorpay_sub_data['remaining_count']
+    if paid_based_on_data > 0:
+        schedule = emi_result.get("data", {}).get("schedule", [])
+        if len(schedule) < paid_based_on_data:
+            raise IndexError(f"Schedule length ({len(schedule)}) is less than required ({paid_based_on_data})")
+
+        for emi in schedule[:paid_based_on_data]:
+            if not isinstance(emi, dict):
+                raise TypeError("EMI entry must be a dictionary")
+
+            paid_principal_amt += emi.get("principal_paid", 0.0)
+            interest_paid_amt += emi.get("interest_paid", 0.0)
+            foreclosure_amt = emi.get("balance", 0.0)
     principal_amount = loan_details.approval_details[0].user_accepted_amount or 0.0
     foreclosure_processing_amount = 0.0
     processing_fee = (effective_processing_fee * principal_amount) / 100
@@ -351,7 +376,7 @@ def calculate_foreclosure_details(
     total_charges = processing_fee + other_charges
 
     return {
-        "foreclosure_amount": foreclosure_amount,
+        "foreclosure_amount": foreclosure_amt,
         "principal_amount": principal_amount,
         "foreclosure_processing_amount": foreclosure_processing_amount,
         "processing_fee": processing_fee,
