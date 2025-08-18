@@ -357,7 +357,7 @@ def calculate_foreclosure_details(
     interest_paid_amt = 0.0
     foreclosure_amt = 0.0
     paid_based_on_data = razorpay_sub_data['total_count'] - razorpay_sub_data['remaining_count']
-    if paid_based_on_data > 0:
+    if paid_based_on_data >= 0:
         schedule = emi_result.get("data", {}).get("schedule", [])
         if len(schedule) < paid_based_on_data:
             raise IndexError(f"Schedule length ({len(schedule)}) is less than required ({paid_based_on_data})")
