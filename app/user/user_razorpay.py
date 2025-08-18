@@ -346,7 +346,6 @@ def get_closure_payment_link(subscription_id: str,
                 # Access loan details
                 loan = subscription.plan.applicant if subscription.plan else None
                 if loan:
-                    print(f"Loan ID: {loan.id}, Details: {loan.__dict__}")
                     loan_approval_detail = loan.approval_details[0] if loan else None   
                     user_accepted_amount = loan_approval_detail.user_accepted_amount
                     approved_interest_rate = loan_approval_detail.approved_interest_rate
@@ -364,19 +363,44 @@ def get_closure_payment_link(subscription_id: str,
                     )
                     if emi_result:
                         EMI_FETCHED = True
-                        # work further for Foreclosure processing
                 else:
                     print("No loan associated with this subscription")
             else:
                 print("Subscription not found")
-        
-
         try:
             if EMI_FETCHED:
-                # NOTE: closure Related Data Will Be Calculated here 
+                required_sub_keys = ['paid_count', 'total_count', 'remaining_count']
+                if not all(key in sub for key in required_sub_keys):
+                    raise KeyError(f"Missing required keys in 'sub': {required_sub_keys}")
+
+                paid_based_on_data = sub['total_count'] - sub['remaining_count']
+
+                if paid_based_on_data < 0:
+                    raise ValueError("'paid_based_on_data' cannot be negative")
+
+                paid_principal_amt = 0.0
+                interest_paid_amt = 0.0
+                foreclosure_amt = 0.0 
+
+                if paid_based_on_data > 0:
+                    schedule = emi_result.get("data", {}).get("schedule", [])
+
+                    # Check if schedule has enough entries to avoid IndexError
+                    if len(schedule) < paid_based_on_data:
+                        raise IndexError(f"Schedule length ({len(schedule)}) is less than required ({paid_based_on_data})")
+
+                    for emi in schedule[:paid_based_on_data]:
+                        if not isinstance(emi, dict):
+                            raise TypeError("EMI entry must be a dictionary")
+
+                        paid_principal_amt += emi.get("principal_paid", 0.0)
+                        interest_paid_amt += emi.get("interest_paid", 0.0)
+                        foreclosure_amt = emi.get("balance", 0.0) 
+
+                # If no paid EMIs, foreclosure_amt remains 0.0 (as per original logic)  
                 ref_id = f"{sub['id']}+{int(time.time() * 1000)}"
                 payment = service.create_payment_link(
-                    amount=closure_amount_paise,
+                    amount=foreclosure_amt * 100,
                     currency="INR",
                     description="Closure Payment",
                     subscription_id=ref_id,
@@ -411,10 +435,9 @@ def get_closure_payment_link(subscription_id: str,
                 content={"success": False, "message": "Subscription not found in DB", "data": {}},
                 status_code=status.HTTP_404_NOT_FOUND
             )
-
         foreclosure_data = {
             "subscription_id": existing_sub.id,
-            "amount": closure_amount_paise / 100,
+            "amount": foreclosure_amt ,
             "reason": "Subscription Closure",
             "status": "pending"
         }
@@ -423,7 +446,7 @@ def get_closure_payment_link(subscription_id: str,
             return foreclosure_response
         payment_details_data = {
             "payment_id": payment['id'],
-            "amount": closure_amount_paise / 100,
+            "amount": foreclosure_amt,
             "currency": "INR",
             "status": payment['status'],
             "payment_method": None,
