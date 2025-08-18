@@ -18,6 +18,7 @@ class LoanStatus(str, Enum):
     CLOSED = "CLOSED"
     CANCELLED = "CANCELLED"
     USER_ACCEPTED = "USER_ACCEPTED"
+    COMPLETED = "COMPLETED"
 
 
 class DocumentStatus(str, Enum):
