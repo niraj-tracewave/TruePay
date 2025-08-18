@@ -119,10 +119,11 @@ class DBInterface:
                 else:
                     query = query.order_by(asc(order_by))
 
+            total_count = query.count()
             query = query.offset(offset).limit(limit)
 
             results = query.all()
-            return results
+            return results, total_count
         except Exception as e:
             session.close()
             raise Exception(f"Error reading with filters in {self.db_class.__name__}: {str(e)}")

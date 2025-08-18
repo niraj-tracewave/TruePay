@@ -109,7 +109,7 @@ class PaymentDetailsService:
             else:
                 final_offset = offset
 
-            payments = self.db_interface.read_all_by_filters(
+            payments, total_counts = self.db_interface.read_all_by_filters(
                 filter_expr=filter_expr,
                 order_by=order_column,
                 order_direction=order_direction,
@@ -132,7 +132,7 @@ class PaymentDetailsService:
                 "data": {
                     "payment_details_entries": payment_list,
                     "total_db_payments": total_payments,
-                    "total_count": total_payments
+                    "total_count": total_counts
                 }
             }
 

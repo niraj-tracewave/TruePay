@@ -107,7 +107,7 @@ class ForeClosureService:
             else:
                 final_offset = offset
 
-            foreclosures = self.db_interface.read_all_by_filters(
+            foreclosures, total_counts = self.db_interface.read_all_by_filters(
                 filter_expr=filter_expr,
                 order_by=order_column,
                 order_direction=order_direction,
@@ -130,7 +130,7 @@ class ForeClosureService:
                 "data": {
                     "foreclosure_entries": foreclosure_list,
                     "total_db_foreclosures": total_foreclosures,
-                    "total_count": total_foreclosures
+                    "total_count": total_counts
                 }
             }
 

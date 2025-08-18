@@ -389,7 +389,7 @@ class AdminLoanService(UserLoanService):
             else:
                 final_offset = offset
 
-            loans = self.db_interface.read_all_by_filters(
+            loans, total_counts = self.db_interface.read_all_by_filters(
                 filter_expr=filter_expr,
                 order_by=order_column,
                 order_direction=order_direction,
@@ -432,7 +432,7 @@ class AdminLoanService(UserLoanService):
                 "data": {
                     "loan_applications": loan_list,
                     "total_db_loans": total_loans,
-                    "total_count": total_loans
+                    "total_count": total_counts
                 }
             }
 

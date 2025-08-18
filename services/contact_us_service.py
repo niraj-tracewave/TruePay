@@ -112,7 +112,7 @@ class ContactUsService:
             else:
                 final_offset = offset
 
-            contacts = self.db_interface.read_all_by_filters(
+            contacts, total_counts = self.db_interface.read_all_by_filters(
                 filter_expr=filter_expr,
                 order_by=order_column,
                 order_direction=order_direction,
@@ -134,7 +134,7 @@ class ContactUsService:
                 "data": {
                     "contact_entries": contact_list,
                     "total_db_contacts": total_contacts,
-                    "total_count": total_contacts
+                    "total_count": total_counts
                 }
             }
 
