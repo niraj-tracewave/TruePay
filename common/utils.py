@@ -269,7 +269,7 @@ def calculate_emi_schedule(
         except Exception as e:
             print(f"Error fetching EMI schedule date: {e}")
 
-        for month in range(tenure_months):
+        for month in range(1, tenure_months+1):
             month_date = current_month + relativedelta(months=month)
             label = f"{str(emi_schedule_date)} {month_date.strftime('%b %Y')}"
             interest = round(balance * monthly_rate, 2)
