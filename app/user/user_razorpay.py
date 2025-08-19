@@ -427,6 +427,11 @@ def get_closure_payment_link(
                 paid_principal_amt += emi.get("principal_paid", 0.0)
                 interest_paid_amt += emi.get("interest_paid", 0.0)
                 foreclosure_amt = emi.get("balance", 0.0)
+            # Set foreclosure_amt to the balance of the next EMI (if available)
+            if paid_based_on_data < len(schedule):
+                foreclosure_amt = schedule[paid_based_on_data].get("balance", 0.0)
+            else:
+                foreclosure_amt = 0.0  # No balance left if all EMIs are paid
         elif paid_based_on_data == 0:
             foreclosure_amt = user_accepted_amount
 
