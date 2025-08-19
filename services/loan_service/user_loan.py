@@ -471,7 +471,7 @@ class UserLoanService:
                     }
                 plan_data = format_plan_and_subscriptions(loan_with_docs.plans)
                 loan_response = LoanApplicantResponseSchema.model_validate(loan_with_docs).model_dump()
-                loan_response["min_loan_amount"]=100
+                loan_response["min_loan_amount"]=10000
                 loan_response["min_tenure_months"]=12
                 loan_response["max_tenure_months"]=loan_with_docs.tenure_months
                 loan_response["tenure_months_steps"]=6
