@@ -594,7 +594,7 @@ class UserLoanService:
                     loan_response["processing_fee_charge"] = processing_fee
                     loan_response["other_charges"] = other_charges
 
-                elif loan_with_docs.approved_loan and loan_with_docs.status in ["USER_ACCEPTED", "DISBURSED"]:
+                elif loan_with_docs.approved_loan and loan_with_docs.status in ["USER_ACCEPTED", "DISBURSED", "COMPLETED", "CLOSED"]:
                     user_filter = [
                         LoanApprovalDetail.applicant_id == loan_application_id
                     ]
