@@ -283,7 +283,11 @@ def calculate_emi_schedule(
                     "principal_paid": principal_paid,
                     "interest_paid": interest,
                     "emi": round(emi, 2),
-                    "balance": balance
+                    "balance": balance,
+                    "show_balance": int(balance),
+                    "show_principal_paid": int(principal_paid),
+                    "show_interest_paid": int(interest),
+                    "show_emi": round(emi, 0),
                 }
             )
 
@@ -295,10 +299,11 @@ def calculate_emi_schedule(
                 "loan_amount": round(float(ceil(loan_amount)), 2),
                 "processing_fee": float(processing_fee),
                 "total_principal": round(float(ceil(total_principal)), 2),
-                "monthly_emi": round(float(ceil(emi)), 2),
+                "monthly_emi": round(float(ceil(emi)), 0),
                 "schedule": schedule,
                 "total_interest": round(float(ceil(sum(p['interest_paid'] for p in schedule))), 2),
-                "total_payment": round(float(ceil(sum(p['emi'] for p in schedule))), 2)
+                # "total_payment": round(float(ceil(sum(p['emi'] for p in schedule))), 0),
+                "total_payment": round(float(ceil(sum(p['interest_paid'] for p in schedule))), 2) + loan_amount
             }
         }
 
