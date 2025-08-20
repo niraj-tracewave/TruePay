@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload, with_loader_criteria
 from starlette import status
 
 from app_logging import app_logger
+from config import app_settings
 from common.cache_string import gettext
 from common.common_services.aws_services import AWSClient
 from common.common_services.email_service import EmailService
@@ -74,7 +75,7 @@ class UserLoanService:
                 "created_by": user_id,
                 "modified_by": user_id,
                 "pan_verified": loan_application_form.pan_verified,
-                "aadhaar_verified": loan_application_form.aadhaar_verified,
+                "aadhaar_verified": loan_application_form.aadhaar_verified if (app_settings.SUREPASS_VALIDATION).lower() == "true" else True,
             }
 
             # Save loan applicant to DB
@@ -177,7 +178,9 @@ class UserLoanService:
                 "success": False,
                 "message": gettext("something_went_wrong"),
                 "status_code": status.HTTP_400_BAD_REQUEST,
-                "data": {}
+                "data": {
+                    "err": str(e)
+                }
             }
 
     def get_loan_applications(self, user_id: str, order_by: Optional[str] = "id", order_dir: Optional[str] = "desc") -> Dict[str, Any]:
@@ -511,6 +514,7 @@ class UserLoanService:
                             "paid_count": razorpay_sub_detail.get("paid_count"),
                             "total_count": razorpay_sub_detail.get("total_count"),
                             "remaining_count": razorpay_sub_detail.get("remaining_count"),
+                            "status":razorpay_sub_detail.get("status"),
                             "latest_paid_at": unix_to_yyyy_mm_dd(get_latest_paid_at(razorpay_sub_invoice_detail)) if razorpay_sub_invoice_detail else None,
                         }
                     except Exception as e:

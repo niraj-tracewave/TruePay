@@ -121,7 +121,7 @@ class RazorpayService:
             "skip": skip
         })
 
-    def create_payment_link(self, amount: int, currency: str, description: str, subscription_id: str, callback_url:str):
+    def create_payment_link(self, amount: any, currency: str, description: str, subscription_id: str, callback_url:str):
         """
         Create a payment link for a specific amount and description.
         :param amount: Amount in paise (e.g., 10000 for ₹100).
@@ -129,7 +129,7 @@ class RazorpayService:
         :param description: Description of the payment link.
         """
         return self.client.payment_link.create({
-            "amount": amount,
+            "amount": int(amount),
             "currency": currency,
             "description": description,
             "accept_partial": False,
