@@ -11,6 +11,7 @@ from db_domains.db_interface import DBInterface
 from models.loan import BankAccount
 from models.surpass import UserCibilReport
 from schemas.surpass_schemas import GetCibilReportData, PanCardDetails, BankDetails, AadharCardDetails
+from config import app_settings
 
 
 class SurpassService:
@@ -21,14 +22,18 @@ class SurpassService:
         data_dict = payload_data.model_dump(mode="json", by_alias=True)
         user_cibil_report = DBInterface(UserCibilReport)
         current_date = date.today()
-
-        existing_report = user_cibil_report.read_single_by_fields(
-            fields=[
-                UserCibilReport.user_id == user_id,
-                UserCibilReport.pan_number == data_dict.get("pan"),
-                UserCibilReport.mobile == data_dict.get("mobile")
-            ]
-        )
+        if (app_settings.SUREPASS_VALIDATION).lower() == "false": # BYPASS API CALL
+            existing_report = user_cibil_report.read_single_by_fields(
+                fields=[]
+            )
+        else:
+            existing_report = user_cibil_report.read_single_by_fields(
+                fields=[
+                    UserCibilReport.user_id == user_id,
+                    UserCibilReport.pan_number == data_dict.get("pan"),
+                    UserCibilReport.mobile == data_dict.get("mobile")
+                ]
+            )
 
         async def get_and_save_cibil_report(existing_id: str = None):
             """Fetch from Surpass and create or update a report."""
@@ -253,6 +258,14 @@ class SurpassService:
 
     async def validate_pan_card(self, user_id: int, pan_detail: PanCardDetails):
         try:
+            if (app_settings.SUREPASS_VALIDATION).lower() == "false":
+                return {
+                    "success": True,
+                    "message": "PAN card validated successfully",
+                    "status_code": status.HTTP_200_OK,
+                    "data": {}
+                }
+                
             pan_card_number = pan_detail.pan_card
             app_logger.info(f"User {user_id} submitted PAN: {pan_card_number}")
 
@@ -298,7 +311,9 @@ class SurpassService:
                 "success": False,
                 "message": "Error validating PAN card",
                 "status_code": status.HTTP_400_BAD_REQUEST,
-                "data": {}
+                "data": {
+                    "err": str(e)
+                }
             }
 
     async def bank_verifications(self, user_id, bank_detail: BankDetails):
@@ -328,32 +343,34 @@ class SurpassService:
             app_logger.debug(f"[bank_verifications] Sending payload to surpass API: {bank_verification_payload_data}")
             
             #NOTE: Commented out the actual API call to Surpass for bank verification
-            response_data, request_status_code, request_error = await self.surpass_request_obj.make_request(
-                endpoint="bank-verification/", method="POST", data=bank_verification_payload_data
-            )
+            if (app_settings.SUREPASS_VALIDATION).lower() == "true":
+                response_data, request_status_code, request_error = await self.surpass_request_obj.make_request(
+                    endpoint="bank-verification/", method="POST", data=bank_verification_payload_data
+                )
 
-            app_logger.info(
-                f"[bank_verifications] Received response from surpass API: status_code={request_status_code}"
-            )
+                app_logger.info(
+                    f"[bank_verifications] Received response from surpass API: status_code={request_status_code}"
+                )
 
-            if request_status_code != 200:
-                app_logger.info(f"Error Data => {response_data}")
-                error_message = request_error
-                if response_data:
-                    error_data = response_data.get("data")
-                    if error_data and error_data.get("remarks"):
-                        error_message = error_data.get("remarks")
+                if request_status_code != 200:
+                    app_logger.info(f"Error Data => {response_data}")
+                    error_message = request_error
+                    if response_data:
+                        error_data = response_data.get("data")
+                        if error_data and error_data.get("remarks"):
+                            error_message = error_data.get("remarks")
 
-                app_logger.warning(f"[bank_verifications] Verification failed: {error_message}")
-                return {
-                    "success": False,
-                    "message": error_message,
-                    "status_code": request_status_code,
-                    "data": {}
-                }
+                    app_logger.warning(f"[bank_verifications] Verification failed: {error_message}")
+                    return {
+                        "success": False,
+                        "message": error_message,
+                        "status_code": request_status_code,
+                        "data": {}
+                    }
 
-            data = response_data.get("data", {})
-            # data = {}
+                data = response_data.get("data", {})
+            else:
+                data = {}
 
             bank_data = {
                 "user_id": bank_detail.user_id,
