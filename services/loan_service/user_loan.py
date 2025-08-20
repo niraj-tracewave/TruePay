@@ -511,6 +511,7 @@ class UserLoanService:
                             "paid_count": razorpay_sub_detail.get("paid_count"),
                             "total_count": razorpay_sub_detail.get("total_count"),
                             "remaining_count": razorpay_sub_detail.get("remaining_count"),
+                            "status":razorpay_sub_detail.get("status"),
                             "latest_paid_at": unix_to_yyyy_mm_dd(get_latest_paid_at(razorpay_sub_invoice_detail)) if razorpay_sub_invoice_detail else None,
                         }
                     except Exception as e:
