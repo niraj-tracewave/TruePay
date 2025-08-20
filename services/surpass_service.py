@@ -7,8 +7,9 @@ from starlette import status
 from app_logging import app_logger
 from common.cache_string import gettext
 from common.common_services.surpass_service import SurpassRequestService
+from common.enums import LoanStatus
 from db_domains.db_interface import DBInterface
-from models.loan import BankAccount
+from models.loan import BankAccount, LoanApplicant
 from models.surpass import UserCibilReport
 from schemas.surpass_schemas import GetCibilReportData, PanCardDetails, BankDetails, AadharCardDetails
 
@@ -327,7 +328,7 @@ class SurpassService:
 
             app_logger.debug(f"[bank_verifications] Sending payload to surpass API: {bank_verification_payload_data}")
             
-            #NOTE: Commented out the actual API call to Surpass for bank verification
+            # NOTE: Commented out the actual API call to Surpass for bank verification
             response_data, request_status_code, request_error = await self.surpass_request_obj.make_request(
                 endpoint="bank-verification/", method="POST", data=bank_verification_payload_data
             )
@@ -377,6 +378,13 @@ class SurpassService:
             app_logger.debug(f"[bank_verifications] Saving verified bank data to DB: {bank_data}")
 
             bank_account_response = bank_account_interface.create(data=bank_data)
+
+            loan_data = {
+                "status": LoanStatus.BANK_VERIFIED
+            }
+            applicant_interface = DBInterface(LoanApplicant)
+            applicant_interface.update(_id=str(bank_detail.applicant_id),
+                                                             data=loan_data)
 
             app_logger.info(f"[bank_verifications] Bank details saved successfully for user_id={user_id}")
             return {

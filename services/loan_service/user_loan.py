@@ -871,6 +871,7 @@ class UserLoanService:
             loan_data['modified_by'] = user_id
             loan_data['disbursement_apply_date'] = datetime.now(ZoneInfo("Asia/Kolkata"))
             loan_data['is_disbursement_manual'] = True
+            loan_data['status'] = LoanStatus.DISBURSEMENT_APPROVAL_PENDING
             loan_updated_instance = self.db_interface.update(_id=str(loan_disbursement_form.applicant_id), data=loan_data)
             app_logger.info(f"{gettext('updated_successfully').format('Loan Disbursement data')}: {loan_updated_instance}")
 
@@ -908,6 +909,7 @@ class UserLoanService:
 
             loan_data = loan_aadhar_verify_form.model_dump(exclude_unset=True)
             loan_data['modified_by'] = user_id
+            loan_data['status'] = LoanStatus.AADHAR_VERIFIED
             loan_updated_instance = self.db_interface.update(_id=str(loan_aadhar_verify_form.applicant_id), data=loan_data)
             app_logger.info(f"{gettext('updated_successfully').format('Loan Aadhar verify status')}: {loan_updated_instance}")
 
