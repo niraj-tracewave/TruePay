@@ -7,8 +7,9 @@ from starlette import status
 from app_logging import app_logger
 from common.cache_string import gettext
 from common.common_services.surpass_service import SurpassRequestService
+from common.enums import LoanStatus
 from db_domains.db_interface import DBInterface
-from models.loan import BankAccount
+from models.loan import BankAccount, LoanApplicant
 from models.surpass import UserCibilReport
 from schemas.surpass_schemas import GetCibilReportData, PanCardDetails, BankDetails, AadharCardDetails
 from config import app_settings
@@ -265,7 +266,7 @@ class SurpassService:
                     "status_code": status.HTTP_200_OK,
                     "data": {}
                 }
-                
+
             pan_card_number = pan_detail.pan_card
             app_logger.info(f"User {user_id} submitted PAN: {pan_card_number}")
 
@@ -394,6 +395,13 @@ class SurpassService:
             app_logger.debug(f"[bank_verifications] Saving verified bank data to DB: {bank_data}")
 
             bank_account_response = bank_account_interface.create(data=bank_data)
+
+            loan_data = {
+                "status": LoanStatus.BANK_VERIFIED
+            }
+            applicant_interface = DBInterface(LoanApplicant)
+            applicant_interface.update(_id=str(bank_detail.applicant_id),
+                                                             data=loan_data)
 
             app_logger.info(f"[bank_verifications] Bank details saved successfully for user_id={user_id}")
             return {
