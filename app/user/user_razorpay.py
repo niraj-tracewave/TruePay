@@ -337,18 +337,22 @@ def get_closure_payment_link(
         # Step 1: Fetch subscription from Razorpay
         sub = service.fetch_subscription(subscription_id)
         if not sub:
-            return JSONResponse(
-                content={"success": False, "message": "Subscription not found", "data": {}},
-                status_code=status.HTTP_404_NOT_FOUND
-            )
+            return {
+                "success": False,
+                "message": "Subscription not found",
+                "status_code": status.HTTP_404_NOT_FOUND,
+                "data": {}
+            }
 
         # Step 2: Fetch plan from Razorpay
         plan = service.fetch_plan(sub['plan_id'])
         if not plan:
-            return JSONResponse(
-                content={"success": False, "message": "Plan not found", "data": {}},
-                status_code=status.HTTP_404_NOT_FOUND
-            )
+            return {
+                "success": False,
+                "message": "Plan not found",
+                "status_code": status.HTTP_404_NOT_FOUND,
+                "data": {}
+            }
 
         # Step 3: Fetch local subscription details with related entities
         filters = [
@@ -368,18 +372,22 @@ def get_closure_payment_link(
             )
 
             if not local_subscription:
-                return JSONResponse(
-                    content={"success": False, "message": "Subscription not found in DB", "data": {}},
-                    status_code=status.HTTP_404_NOT_FOUND
-                )
+                return {
+                    "success": False,
+                    "message": "Subscription not found in DB",
+                    "status_code": status.HTTP_404_NOT_FOUND,
+                    "data": {}
+                }
 
             # Access loan details
             loan = local_subscription.plan.applicant if local_subscription.plan else None
             if not loan or not loan.approval_details:
-                return JSONResponse(
-                    content={"success": False, "message": "No loan or approval details associated with this subscription", "data": {}},
-                    status_code=status.HTTP_400_BAD_REQUEST
-                )
+                return {
+                    "success": False,
+                    "message": "No loan or approval details associated with this subscription",
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "data": {}
+                }
 
             loan_approval_detail = loan.approval_details[0]
             user_accepted_amount = loan_approval_detail.user_accepted_amount
@@ -397,10 +405,12 @@ def get_closure_payment_link(
                 loan_type=loan.loan_type
             )
             if not emi_result:
-                return JSONResponse(
-                    content={"success": False, "message": "Failed to calculate EMI schedule", "data": {}},
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
+                return {
+                    "success": False,
+                    "message": "Failed to calculate EMI schedule",
+                    "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    "data": {}
+                }
 
         # Step 5: Validate and compute foreclosure amount from EMI schedule
         required_sub_keys = ['paid_count', 'total_count', 'remaining_count']
@@ -461,10 +471,12 @@ def get_closure_payment_link(
                         ref_id = f"{sub['id']}+{int(time.time() * 1000)}"  # Regenerate ref_id
                         continue
                     else:
-                        return JSONResponse(
-                            content={"success": False, "message": "Failed to create unique payment link after retries", "data": {}},
-                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-                        )
+                        return {
+                            "success": False,
+                            "message": "Failed to create unique payment link after retries",
+                            "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            "data": {}
+                        }
                 else:
                     raise  # Rethrow other exceptions
 
@@ -477,10 +489,12 @@ def get_closure_payment_link(
         }
         foreclosure_response = foreclosure_service.create_foreclosure(foreclosure_data)
         if not foreclosure_response['success']:
-            return JSONResponse(
-                content=foreclosure_response,
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return {
+                "success": False,
+                "message": foreclosure_response,
+                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "data": {}
+            }
 
         payment_details_data = {
             "payment_id": payment['id'],
@@ -492,42 +506,56 @@ def get_closure_payment_link(
         }
         payment_details_response = payment_details_service.create_payment_details(payment_details_data)
         if not payment_details_response['success']:
-            return JSONResponse(
-                content=payment_details_response,
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return {
+                "success": False,
+                "message": payment_details_response,
+                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "data": {}
+            }
 
         # Step 8: Return success
-        return JSONResponse(
-            content={"success": True, "message": "Payment Link Created Successfully!", "data": {"payment": payment}},
-            status_code=status.HTTP_200_OK
-        )
+        return {
+            "success": True,
+            "message": "Payment Link Created Successfully!",
+            "status_code": status.HTTP_200_OK,
+            "data": {"payment": payment}
+        }
 
     except KeyError as ke:
-        return JSONResponse(
-            content={"success": False, "message": f"Key error: {str(ke)}", "data": {}},
-            status_code=status.HTTP_400_BAD_REQUEST
-        )
+        return {
+            "success": False,
+            "message": f"Key error: {str(ke)}",
+            "status_code": status.HTTP_400_BAD_REQUEST,
+            "data": {}
+        }
     except ValueError as ve:
-        return JSONResponse(
-            content={"success": False, "message": f"Value error: {str(ve)}", "data": {}},
-            status_code=status.HTTP_400_BAD_REQUEST
-        )
+        return {
+            "success": False,
+            "message": f"Value error: {str(ve)}",
+            "status_code": status.HTTP_400_BAD_REQUEST,
+            "data": {}
+        }
     except IndexError as ie:
-        return JSONResponse(
-            content={"success": False, "message": f"Index error: {str(ie)}", "data": {}},
-            status_code=status.HTTP_400_BAD_REQUEST
-        )
+        return {
+            "success": False,
+            "message": f"Index error: {str(ie)}",
+            "status_code": status.HTTP_400_BAD_REQUEST,
+            "data": {}
+        }
     except TypeError as te:
-        return JSONResponse(
-            content={"success": False, "message": f"Type error: {str(te)}", "data": {}},
-            status_code=status.HTTP_400_BAD_REQUEST
-        )
+        return {
+            "success": False,
+            "message": f"Type error: {str(te)}",
+            "status_code": status.HTTP_400_BAD_REQUEST,
+            "data": {}
+        }
     except Exception as e:
-        return JSONResponse(
-            content={"success": False, "message": "Internal Server Error", "data": {"error": str(e)}},
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        return {
+            "success": False,
+            "message": "Internal Server Error",
+            "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "data": {"error": str(e)}
+        }
         
 @router.get("/get-payment-details/{payment_id}")
 def get_payment_details(payment_id: str, service: RazorpayService = Depends(get_razorpay_service)):

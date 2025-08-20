@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload, with_loader_criteria
 from starlette import status
 
 from app_logging import app_logger
+from config import app_settings
 from common.cache_string import gettext
 from common.common_services.aws_services import AWSClient
 from common.common_services.email_service import EmailService
@@ -177,7 +178,9 @@ class UserLoanService:
                 "success": False,
                 "message": gettext("something_went_wrong"),
                 "status_code": status.HTTP_400_BAD_REQUEST,
-                "data": {}
+                "data": {
+                    "err": str(e)
+                }
             }
 
     def get_loan_applications(self, user_id: str, order_by: Optional[str] = "id", order_dir: Optional[str] = "desc") -> Dict[str, Any]:
@@ -595,7 +598,7 @@ class UserLoanService:
                     loan_response["processing_fee_charge"] = processing_fee
                     loan_response["other_charges"] = other_charges
 
-                elif loan_with_docs.approved_loan and loan_with_docs.status in ["USER_ACCEPTED", "DISBURSED", "COMPLETED", "CLOSED"]:
+                elif loan_with_docs.approved_loan and loan_with_docs.status in ["USER_ACCEPTED", "DISBURSED", "COMPLETED", "CLOSED", "E_MANDATE_GENERATED", "BANK_VERIFIED", "DISBURSEMENT_APPROVAL_PENDING"]:
                     user_filter = [
                         LoanApprovalDetail.applicant_id == loan_application_id
                     ]
@@ -872,6 +875,7 @@ class UserLoanService:
             loan_data['modified_by'] = user_id
             loan_data['disbursement_apply_date'] = datetime.now(ZoneInfo("Asia/Kolkata"))
             loan_data['is_disbursement_manual'] = True
+            loan_data['status'] = LoanStatus.DISBURSEMENT_APPROVAL_PENDING
             loan_updated_instance = self.db_interface.update(_id=str(loan_disbursement_form.applicant_id), data=loan_data)
             app_logger.info(f"{gettext('updated_successfully').format('Loan Disbursement data')}: {loan_updated_instance}")
 
@@ -909,6 +913,7 @@ class UserLoanService:
 
             loan_data = loan_aadhar_verify_form.model_dump(exclude_unset=True)
             loan_data['modified_by'] = user_id
+            loan_data['status'] = LoanStatus.AADHAR_VERIFIED
             loan_updated_instance = self.db_interface.update(_id=str(loan_aadhar_verify_form.applicant_id), data=loan_data)
             app_logger.info(f"{gettext('updated_successfully').format('Loan Aadhar verify status')}: {loan_updated_instance}")
 

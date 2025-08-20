@@ -34,7 +34,7 @@ class LoanApplicant(CreateUpdateTime, CreateByUpdateBy):
         Enum(LoanType), default=LoanType.PERSONAL, server_default=LoanType.PERSONAL.value, nullable=False
     )
     status = Column(
-        Enum(LoanStatus), default=LoanStatus.PENDING, server_default=LoanStatus.PENDING.value, nullable=False
+        Enum(LoanStatus), default=LoanStatus.APPLICATION_SUBMITTED, server_default=LoanStatus.APPLICATION_SUBMITTED.value, nullable=False
     )
     approved_loan = Column(Float, nullable=True)
     credit_score_range_rate_id = Column(
