@@ -75,7 +75,7 @@ class UserLoanService:
                 "created_by": user_id,
                 "modified_by": user_id,
                 "pan_verified": loan_application_form.pan_verified,
-                "aadhaar_verified": loan_application_form.aadhaar_verified if (app_settings.SUREPASS_VALIDATION).lower() == "true" else True,
+                "aadhaar_verified": loan_application_form.aadhaar_verified,
             }
 
             # Save loan applicant to DB
