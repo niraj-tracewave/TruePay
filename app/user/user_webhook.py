@@ -82,7 +82,9 @@ async def razorpay_webhook(request: Request):
                         if not sub_data:
                             pass
                         sub_data.status = "authenticated"
-                        sub_data.plan.applicant.status = "E_MANDATE_GENERATED"
+                        current_loan_status = sub_data.plan.applicant.status
+                        if current_loan_status not in ["DISBURSED", "DISBURSEMENT_APPROVAL_PENDING", "COMPLETED", "CANCELLED", "CLOSED"]: 
+                            sub_data.plan.applicant.status = "E_MANDATE_GENERATED"
                         session.commit()
             
             case "payment_link.paid":
