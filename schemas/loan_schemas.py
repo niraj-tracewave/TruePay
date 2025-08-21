@@ -140,6 +140,7 @@ class LoanApplicantResponseSchemaForAdmin(BaseModel):
     custom_processing_fee: Optional[float] = 0.0
     tenure_months: Optional[int] = 0
     available_for_disbursement: Optional[bool] = False
+    emi_start_day_atm: Optional[int] = None
 
     model_config = {
         "from_attributes": True

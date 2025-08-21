@@ -92,6 +92,7 @@ class AdminLoanService(UserLoanService):
             credit_score_range_rate = DBInterface(CreditScoreRangeRate)
             for loan in loans:
                 loan_data = LoanApplicantResponseSchema.model_validate(loan).model_dump(exclude={"documents"})
+                loan_data['emi_start_day_atm'] = loan.emi_start_day_atm
 
                 # Fetch matching interest rate info for this loan's type
                 rate_entry = credit_score_range_rate.read_by_fields(
