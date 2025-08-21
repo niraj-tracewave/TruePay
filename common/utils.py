@@ -217,7 +217,7 @@ def calculate_emi(
 def calculate_emi_schedule(
         loan_amount: float, annual_interest_rate: float, tenure_months: int, processing_fee: float = 0.0,
         is_fee_percentage: bool = False, start_date: datetime = datetime.today(),
-        loan_type: str = None,
+        loan_type: str = None, emi_start_day_atm: int = None
 
 ) -> Dict[str, Any]:
     """
@@ -258,14 +258,17 @@ def calculate_emi_schedule(
         # Fetch Static Fixed Date 
         emi_schedule_date = 5
         try:
-            emi_schedule_db_interface = DBInterface(EmiScheduleDate)
-            existing_entry = emi_schedule_db_interface.read_single_by_fields(
-                    fields=[
-                        EmiScheduleDate.emi_schedule_loan_type == loan_type,
-                        EmiScheduleDate.is_deleted == False,
-                    ]
-                )
-            emi_schedule_date = existing_entry.emi_schedule_date if existing_entry else 5
+            if emi_start_day_atm:
+                emi_schedule_date = emi_start_day_atm
+            else:
+                emi_schedule_db_interface = DBInterface(EmiScheduleDate)
+                existing_entry = emi_schedule_db_interface.read_single_by_fields(
+                        fields=[
+                            EmiScheduleDate.emi_schedule_loan_type == loan_type,
+                            EmiScheduleDate.is_deleted == False,
+                        ]
+                    )
+                emi_schedule_date = existing_entry.emi_schedule_date if existing_entry else 5
         except Exception as e:
             print(f"Error fetching EMI schedule date: {e}")
 
@@ -299,11 +302,13 @@ def calculate_emi_schedule(
                 "loan_amount": round(float(ceil(loan_amount)), 2),
                 "processing_fee": float(processing_fee),
                 "total_principal": round(float(ceil(total_principal)), 2),
-                "monthly_emi": round(float(ceil(emi)), 0),
+                # "monthly_emi": round(float(ceil(emi)), 0),
+                "monthly_emi": round(emi, 0),
                 "schedule": schedule,
-                "total_interest": round(float(ceil(sum(p['interest_paid'] for p in schedule))), 2),
+                # "total_interest": round(float(ceil(sum(p['interest_paid'] for p in schedule))), 2),
+                "total_interest": round(float(sum(p['interest_paid'] for p in schedule)), 0),
                 # "total_payment": round(float(ceil(sum(p['emi'] for p in schedule))), 0),
-                "total_payment": round(float(ceil(sum(p['interest_paid'] for p in schedule))), 2) + loan_amount
+                "total_payment": round(float(sum(p['interest_paid'] for p in schedule))) + loan_amount
             }
         }
 
@@ -355,7 +360,8 @@ def calculate_foreclosure_details(
                 annual_interest_rate=approved_interest_rate,
                 processing_fee=approved_processing_fee,
                 is_fee_percentage=True,
-                loan_type=loan_details.loan_type
+                loan_type=loan_details.loan_type,
+                emi_start_day_atm=loan_details.emi_start_day_atm
             )
     
     paid_principal_amt = 0.0

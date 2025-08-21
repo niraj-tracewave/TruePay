@@ -34,7 +34,7 @@ class LoanApplicant(CreateUpdateTime, CreateByUpdateBy):
         Enum(LoanType), default=LoanType.PERSONAL, server_default=LoanType.PERSONAL.value, nullable=False
     )
     status = Column(
-        Enum(LoanStatus), default=LoanStatus.PENDING, server_default=LoanStatus.PENDING.value, nullable=False
+        Enum(LoanStatus), default=LoanStatus.APPLICATION_SUBMITTED, server_default=LoanStatus.APPLICATION_SUBMITTED.value, nullable=False
     )
     approved_loan = Column(Float, nullable=True)
     credit_score_range_rate_id = Column(
@@ -52,6 +52,7 @@ class LoanApplicant(CreateUpdateTime, CreateByUpdateBy):
 
     available_for_disbursement = Column(Boolean, default=False)
     disbursement_apply_date = Column(DateTime, nullable=True)
+    emi_start_day_atm = Column(Integer, nullable=True)
     is_disbursement_manual = Column(Boolean, default=False)
     pan_verified = Column(Boolean, default=False)
     aadhaar_verified = Column(Boolean, default=False)

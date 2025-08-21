@@ -35,6 +35,8 @@ class Setting(BaseSettings):
     RAZORPAY_SECRET: str
     GST_CHARGE: str
     WEBHOOK_SECRET: str
+    SUREPASS_VALIDATION: str
+    EMI_START_DATE: str
 
     # Default Log type
     LOG_LEVEL: str
@@ -100,6 +102,8 @@ class Config(object):
     RAZORPAY_SECRET=app_settings.RAZORPAY_SECRET
     GST_CHARGE = app_settings.GST_CHARGE
     WEBHOOK_SECRET = app_settings.WEBHOOK_SECRET
+    SUREPASS_VALIDATION = app_settings.SUREPASS_VALIDATION
+    EMI_START_DATE = app_settings.EMI_START_DATE
 
 
 class LocalConfig(Config):

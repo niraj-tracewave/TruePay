@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload, with_loader_criteria
 from starlette import status
 
 from app_logging import app_logger
+from config import app_settings
 from common.cache_string import gettext
 from common.common_services.aws_services import AWSClient
 from common.common_services.email_service import EmailService
@@ -21,7 +22,7 @@ from config import app_config
 from db_domains import Base
 from db_domains.db import DBSession
 from db_domains.db_interface import DBInterface
-from models.loan import LoanDocument, LoanApplicant, LoanApprovalDetail
+from models.loan import LoanDocument, LoanApplicant, LoanApprovalDetail, EmiScheduleDate
 from models.razorpay import Plan, Subscription, ForeClosure, PaymentDetails
 from schemas.loan_schemas import LoanForm, LoanApplicantResponseSchema, UserApprovedLoanForm, InstantCashForm, \
     LoanConsentForm, LoanDisbursementForm, LoanAadharVerifiedStatusForm
@@ -177,7 +178,9 @@ class UserLoanService:
                 "success": False,
                 "message": gettext("something_went_wrong"),
                 "status_code": status.HTTP_400_BAD_REQUEST,
-                "data": {}
+                "data": {
+                    "err": str(e)
+                }
             }
 
     def get_loan_applications(self, user_id: str, order_by: Optional[str] = "id", order_dir: Optional[str] = "desc") -> Dict[str, Any]:
@@ -223,6 +226,7 @@ class UserLoanService:
                     "aadhaar_verified": loan.aadhaar_verified,
                     "pan_verified": loan.pan_verified,
                     "available_for_disbursement": loan.available_for_disbursement,
+                    "emi_start_day_atm": loan.emi_start_day_atm,
                     "plan_details": plan_data,
                     "documents": [
                         {
@@ -485,6 +489,7 @@ class UserLoanService:
                 loan_response["is_disbursement_manual"] = loan_with_docs.is_disbursement_manual
                 loan_response["pan_verified"] = loan_with_docs.pan_verified
                 loan_response["aadhaar_verified"] = loan_with_docs.aadhaar_verified
+                loan_response["emi_start_day_atm"] =  loan_with_docs.emi_start_day_atm
                 loan_response["plan_details"] = plan_data
                 #NOTE: Fetch Subscription Details and Proceed with The start date and End Date details for "Consumer durable loan Details" Page
                 loan_response["e_mandate_payment_track"] = {}
@@ -580,7 +585,8 @@ class UserLoanService:
                         annual_interest_rate=loan_response["effective_interest_rate"],
                         processing_fee=effective_processing_fee,
                         is_fee_percentage=True,
-                        loan_type=loan_with_docs.loan_type
+                        loan_type=loan_with_docs.loan_type,
+                        emi_start_day_atm=loan_with_docs.emi_start_day_atm
                     )
 
                     if emi_result.get("success"):
@@ -595,7 +601,7 @@ class UserLoanService:
                     loan_response["processing_fee_charge"] = processing_fee
                     loan_response["other_charges"] = other_charges
 
-                elif loan_with_docs.approved_loan and loan_with_docs.status in ["USER_ACCEPTED", "DISBURSED", "COMPLETED", "CLOSED"]:
+                elif loan_with_docs.approved_loan and loan_with_docs.status in ["USER_ACCEPTED", "DISBURSED", "COMPLETED", "CLOSED", "E_MANDATE_GENERATED", "BANK_VERIFIED", "DISBURSEMENT_APPROVAL_PENDING"]:
                     user_filter = [
                         LoanApprovalDetail.applicant_id == loan_application_id
                     ]
@@ -613,7 +619,8 @@ class UserLoanService:
                             annual_interest_rate=loan_approval_detail.approved_interest_rate,
                             processing_fee=effective_processing_fee,
                             is_fee_percentage=True,
-                            loan_type=loan_with_docs.loan_type
+                            loan_type=loan_with_docs.loan_type,
+                            emi_start_day_atm=loan_with_docs.emi_start_day_atm,
                         )
                         if emi_result.get("success"):
                             loan_response["emi_info"] = emi_result["data"]
@@ -872,6 +879,7 @@ class UserLoanService:
             loan_data['modified_by'] = user_id
             loan_data['disbursement_apply_date'] = datetime.now(ZoneInfo("Asia/Kolkata"))
             loan_data['is_disbursement_manual'] = True
+            loan_data['status'] = LoanStatus.DISBURSEMENT_APPROVAL_PENDING
             loan_updated_instance = self.db_interface.update(_id=str(loan_disbursement_form.applicant_id), data=loan_data)
             app_logger.info(f"{gettext('updated_successfully').format('Loan Disbursement data')}: {loan_updated_instance}")
 
@@ -909,6 +917,7 @@ class UserLoanService:
 
             loan_data = loan_aadhar_verify_form.model_dump(exclude_unset=True)
             loan_data['modified_by'] = user_id
+            loan_data['status'] = LoanStatus.AADHAR_VERIFIED
             loan_updated_instance = self.db_interface.update(_id=str(loan_aadhar_verify_form.applicant_id), data=loan_data)
             app_logger.info(f"{gettext('updated_successfully').format('Loan Aadhar verify status')}: {loan_updated_instance}")
 
