@@ -133,7 +133,7 @@ class RazorpayService:
             "currency": currency,
             "description": description,
             "accept_partial": False,
-            "first_min_partial_amount": amount,
+            # "first_min_partial_amount": amount, # removed as this is giving error
             "reference_id": subscription_id, #NOTE This to capture paymenet based on subscription
             "notify": {
                 "sms": True,

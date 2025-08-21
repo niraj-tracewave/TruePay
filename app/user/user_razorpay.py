@@ -10,6 +10,7 @@ from models.razorpay import Plan, Subscription
 from services.plan_service import PlanService
 from services.subscription_service import SubscriptionService
 from services.foreclosure_service import ForeClosureService
+from services.prepayment_service import PrePaymentService
 from services.payment_details_service import PaymentDetailsService
 from services.loan_service.user_loan import UserLoanService
 from services.razorpay_service import RazorpayService
@@ -27,6 +28,7 @@ loan_service = UserLoanService(LoanApplicant)
 plan_service = PlanService(Plan)
 sub_service = SubscriptionService(Subscription)
 foreclosure_service = ForeClosureService()
+pre_payment_service = PrePaymentService()
 payment_details_service = PaymentDetailsService()
 
 @router.post("/create-razorpay-plan-sub/{applicant_id}")
@@ -665,7 +667,7 @@ def get_closure_payment_link(
         
         schedule = emi_result.get("data", {}).get("schedule", [])
         
-        pre_payment_amt = 0.0
+        emi_amount_each_month = 0.0
         
         if paid_based_on_data == 0 : # User has not paid any EMI yet
             emi_amount_each_month = schedule[0].get("emi")
@@ -708,33 +710,34 @@ def get_closure_payment_link(
                     raise  # Rethrow other exceptions
 
         # Step 7: Create PrePayment and payment details in DB
-        # foreclosure_data = {
-        #     "subscription_id": local_subscription.id,
-        #     "amount": pre_payment_amt,
-        #     "reason": "Subscription Closure",
-        #     "status": "pending"
-        # }
-        # foreclosure_response = foreclosure_service.create_foreclosure(foreclosure_data)
-        # if not foreclosure_response['success']:
-        #     return JSONResponse(
-        #         content=foreclosure_response,
-        #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-        #     )
+        pre_payment_data = {
+            "subscription_id": local_subscription.id,
+            "amount": emi_amount_each_month,
+            "reason": "Subscription Pre Payment",
+            "status": "pending",
+            "emi_stepper": emi_stepper
+        }
+        prepayment_response = pre_payment_service.create_pre_payment(pre_payment_data)
+        if not prepayment_response['success']:
+            return JSONResponse(
+                content=prepayment_response,
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
-        # payment_details_data = {
-        #     "payment_id": payment['id'],
-        #     "amount": pre_payment_amt,
-        #     "currency": "INR",
-        #     "status": payment['status'],
-        #     "payment_method": None,
-        #     "foreclosure_id": foreclosure_response["data"].id
-        # }
-        # payment_details_response = payment_details_service.create_payment_details(payment_details_data)
-        # if not payment_details_response['success']:
-        #     return JSONResponse(
-        #         content=payment_details_response,
-        #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-        #     )
+        payment_details_data = {
+            "payment_id": payment['id'],
+            "amount": emi_amount_each_month,
+            "currency": "INR",
+            "status": payment['status'],
+            "payment_method": None,
+            "prepayment_id": prepayment_response["data"].id
+        }
+        payment_details_response = payment_details_service.create_payment_details(payment_details_data)
+        if not payment_details_response['success']:
+            return JSONResponse(
+                content=payment_details_response,
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
         # Step 8: Return success
         return JSONResponse(
