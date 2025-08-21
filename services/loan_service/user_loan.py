@@ -22,7 +22,7 @@ from config import app_config
 from db_domains import Base
 from db_domains.db import DBSession
 from db_domains.db_interface import DBInterface
-from models.loan import LoanDocument, LoanApplicant, LoanApprovalDetail
+from models.loan import LoanDocument, LoanApplicant, LoanApprovalDetail, EmiScheduleDate
 from models.razorpay import Plan, Subscription, ForeClosure, PaymentDetails
 from schemas.loan_schemas import LoanForm, LoanApplicantResponseSchema, UserApprovedLoanForm, InstantCashForm, \
     LoanConsentForm, LoanDisbursementForm, LoanAadharVerifiedStatusForm
@@ -226,6 +226,7 @@ class UserLoanService:
                     "aadhaar_verified": loan.aadhaar_verified,
                     "pan_verified": loan.pan_verified,
                     "available_for_disbursement": loan.available_for_disbursement,
+                    "emi_start_day_atm": loan.emi_start_day_atm,
                     "plan_details": plan_data,
                     "documents": [
                         {
@@ -488,6 +489,7 @@ class UserLoanService:
                 loan_response["is_disbursement_manual"] = loan_with_docs.is_disbursement_manual
                 loan_response["pan_verified"] = loan_with_docs.pan_verified
                 loan_response["aadhaar_verified"] = loan_with_docs.aadhaar_verified
+                loan_response["emi_start_day_atm"] =  loan_with_docs.emi_start_day_atm
                 loan_response["plan_details"] = plan_data
                 #NOTE: Fetch Subscription Details and Proceed with The start date and End Date details for "Consumer durable loan Details" Page
                 loan_response["e_mandate_payment_track"] = {}
@@ -583,7 +585,8 @@ class UserLoanService:
                         annual_interest_rate=loan_response["effective_interest_rate"],
                         processing_fee=effective_processing_fee,
                         is_fee_percentage=True,
-                        loan_type=loan_with_docs.loan_type
+                        loan_type=loan_with_docs.loan_type,
+                        emi_start_day_atm=loan_with_docs.emi_start_day_atm
                     )
 
                     if emi_result.get("success"):
@@ -616,7 +619,8 @@ class UserLoanService:
                             annual_interest_rate=loan_approval_detail.approved_interest_rate,
                             processing_fee=effective_processing_fee,
                             is_fee_percentage=True,
-                            loan_type=loan_with_docs.loan_type
+                            loan_type=loan_with_docs.loan_type,
+                            emi_start_day_atm=loan_with_docs.emi_start_day_atm,
                         )
                         if emi_result.get("success"):
                             loan_response["emi_info"] = emi_result["data"]
