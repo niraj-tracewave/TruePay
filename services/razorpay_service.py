@@ -96,6 +96,19 @@ class RazorpayService:
         Cancel a subscription
         """
         return self.client.subscription.cancel(subscription_id)
+    
+    def pause_subscription(self, subscription_id: str, pause_at: str = "now") -> Dict:
+        """
+        Pause an active subscription immediately or at end of current cycle.
+
+        Parameters:
+            subscription_id: Razorpay subscription ID (e.g., "sub_00000000000001")
+            pause_at: "now" to pause immediately, or "cycle_end" to pause at end of billing cycle
+
+        Returns:
+            Dictionary response from Razorpay API (subscription object)
+        """
+        return self.client.subscription.pause(subscription_id)
 
     def verify_webhook_signature(self, payload_body: str, signature: str, secret: str) -> bool:
         """
