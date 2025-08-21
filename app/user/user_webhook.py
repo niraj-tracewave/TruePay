@@ -89,8 +89,10 @@ async def razorpay_webhook(request: Request):
             
             case "payment_link.paid":
                 try:
+                    # NOTE: Here Check wether the paid payment is from foreclosure or pre-payment
                     # Extract entity safely
                     entity = data.get("payload", {}).get("payment_link", {}).get("entity")
+                    description_flag = entity.get("description")
                     if not entity:
                         print("⚠ No payment link entity found in webhook payload.")
                         pass
@@ -104,7 +106,7 @@ async def razorpay_webhook(request: Request):
                     print(f" Payment Link ID: {payment_link_id}")
                     # Example: update_payment_link_status(payment_link_id, "paid")
                     webhook_dbService.update_payment_link_status(
-                        payment_link_id, "paid"
+                        payment_link_id, "paid", description_flag
                     )
                     print(f" Payment link {payment_link_id} status updated to 'paid' in database.")
 

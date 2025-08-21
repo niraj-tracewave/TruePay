@@ -459,7 +459,7 @@ def get_closure_payment_link(
                 payment = service.create_payment_link(
                     amount=foreclosure_amt * 100,
                     currency="INR",
-                    description="Closure Payment",
+                    description="forclosure_payment",
                     subscription_id=ref_id,
                     callback_url=callback_url
                 )
@@ -595,6 +595,12 @@ def get_closure_payment_link(
                 content={"success": False, "message": "Subscription not found", "data": {}},
                 status_code=status.HTTP_404_NOT_FOUND
             )
+            
+        if sub.get("status") != "active":
+             return JSONResponse(
+                content={"success": False, "message": "The subscription status is not Active. To proceed with pre-payment, the subscription must be in Active status.", "data": {}},
+                status_code=status.HTTP_404_NOT_FOUND
+            )
 
         # Step 2: Fetch plan from Razorpay
         plan = service.fetch_plan(sub['plan_id'])
@@ -666,20 +672,11 @@ def get_closure_payment_link(
             raise ValueError("'paid_based_on_data' cannot be negative")
         
         schedule = emi_result.get("data", {}).get("schedule", [])
-        
-        emi_amount_each_month = 0.0
-        
+        emi_amount_each_month = schedule[0].get("emi")
         if paid_based_on_data == 0 : # User has not paid any EMI yet
-            emi_amount_each_month = schedule[0].get("emi")
             emi_stepper = 1
         else: # User
             emi_stepper = paid_based_on_data + 1
-            
-            
-            
-
-      
-
         # Step 6: Create unique reference ID and payment link
         ref_id = f"{sub['id']}+{int(time.time() * 1000)}"
         max_retries = 3  # To handle duplicate reference_id
@@ -688,7 +685,7 @@ def get_closure_payment_link(
                 payment = service.create_payment_link(
                     amount=emi_amount_each_month * 100,
                     currency="INR",
-                    description="PrePayment Link",
+                    description="pre_payment",
                     subscription_id=ref_id,
                     callback_url=callback_url
                 )
