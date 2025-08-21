@@ -52,6 +52,7 @@ class LoanApplicant(CreateUpdateTime, CreateByUpdateBy):
 
     available_for_disbursement = Column(Boolean, default=False)
     disbursement_apply_date = Column(DateTime, nullable=True)
+    emi_start_day_atm = Column(Integer, nullable=True)
     is_disbursement_manual = Column(Boolean, default=False)
     pan_verified = Column(Boolean, default=False)
     aadhaar_verified = Column(Boolean, default=False)

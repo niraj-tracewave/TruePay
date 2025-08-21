@@ -127,7 +127,8 @@ def create_emi_mandate(
             annual_interest_rate=approved_interest_rate,
             processing_fee=approved_processing_fee,
             is_fee_percentage=True,
-            loan_type=loan_details.loan_type
+            loan_type=loan_details.loan_type,
+            emi_start_day_atm=loan_details.emi_start_day_atm
         )
         if emi_result["status_code"] != status.HTTP_200_OK:
             return {
@@ -217,6 +218,8 @@ def create_emi_mandate(
                     "status_code": status.HTTP_400_BAD_REQUEST,
                     "data": {}
                 }
+
+            loan_details.emi_start_day_atm = emi_schedule_date
 
             # Commit the transaction
             session.commit()
@@ -404,7 +407,8 @@ def get_closure_payment_link(
                 annual_interest_rate=approved_interest_rate,
                 processing_fee=approved_processing_fee,
                 is_fee_percentage=True,
-                loan_type=loan.loan_type
+                loan_type=loan.loan_type,
+                emi_start_day_atm=loan.emi_start_day_atm,
             )
             if not emi_result:
                 return {
