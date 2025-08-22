@@ -7,7 +7,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from common.enums import IncomeProofType, DocumentType, DocumentStatus, LoanType, LoanStatus, GenderEnum, PaymentType
+from common.enums import IncomeProofType, DocumentType, DocumentStatus, LoanType, LoanStatus, GenderEnum, PaymentType, \
+    ChargeStatus
 from db_domains import CreateUpdateTime, CreateByUpdateBy
 
 
@@ -232,3 +233,16 @@ class ApprovedLoanDocument(CreateUpdateTime, CreateByUpdateBy):
 
     def __repr__(self):
         return f"<LoanDocument id={self.id} applicant_id={self.applicant_id} document_name={self.document_name}>"
+
+
+class Charges(CreateUpdateTime, CreateByUpdateBy):
+    __tablename__ = "charges"
+    id = Column(Integer, primary_key=True, index=True)
+
+    status = Column(
+        Enum(ChargeStatus),nullable=False
+    )
+    amount = Column(Float, nullable=False)
+
+    def __repr__(self):
+        return f"<Charges id={self.id} status={self.status} >"

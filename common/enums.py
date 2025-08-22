@@ -100,3 +100,8 @@ class PaymentType(str, Enum):
     CASH = "CASH"
     CHEQUE = "CHEQUE"
     UPI = "UPI"
+
+class ChargeStatus(str, Enum):
+    BOUNCE_CHARGE = "BOUNCE_CHARGE"
+    FORECLOSURE_CHARGE = "FORECLOSURE_CHARGE"
+    PENALTY = "PENALTY"
