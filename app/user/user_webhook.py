@@ -9,6 +9,8 @@ from config import app_config
 from fastapi import APIRouter, Request
 from services.razorpay_service import RazorpayService
 from common.utills_webhook import WebhookDBService
+from common.enums import InvoiceStatus
+from common.utils import map_razorpay_invoice_to_db
 
 razorpay_service_obj = RazorpayService(
                 app_config.RAZORPAY_KEY_ID, app_config.RAZORPAY_SECRET)
@@ -114,7 +116,47 @@ async def razorpay_webhook(request: Request):
                         print(f"Error processing payment_link.paid event: {e}")
 
             case event if event.startswith("invoice."):
-                pass
+                invoice_data = data.get("payload", {}).get("invoice", {}).get("entity", {})
+                razorpay_invoice_id = invoice_data.get("id")
+                if not razorpay_invoice_id:
+                    print("No invoice ID found in payload")
+                    
+                invoice_data = data.get("payload", {}).get("invoice", {}).get("entity", {})
+                
+
+                match event:
+                    case "invoice.draft":
+                        invoice_status = InvoiceStatus.DRAFT
+                    case "invoice.issued":
+                        invoice_status = InvoiceStatus.ISSUED
+                    case "invoice.paid":
+                        invoice_status = InvoiceStatus.PAID
+                    case "invoice.partially_paid":
+                        invoice_status = InvoiceStatus.PARTIALLY_PAID
+                    case "invoice.cancelled":
+                        invoice_status = InvoiceStatus.CANCELLED
+                    case "invoice.expired":
+                        invoice_status = InvoiceStatus.EXPIRED
+                    case _:
+                        print(f"Unsupported invoice event: {event}")
+                        invoice_status = None  # or handle as needed
+                
+                breakpoint() #NOTE WIP
+                payment_detail_id = invoice_data.get("payment_id")  # e.g., "pay_R8OMiogb7wcP1w"
+                subscription_id = invoice_data.get("subscription_id")  # e.g., "sub_R7ydKxyc2QrqUV"
+                emi_number = 1  # Example: Set based on your business logic
+                    
+                # Map to database format
+                db_invoice = map_razorpay_invoice_to_db(
+                    invoice_json=invoice_data,
+                    emi_number=emi_number,
+                    payment_detail_id=None,
+                    subscription_id=subscription_id if subscription_id else None
+                )
+                # Update status based on event if needed
+                db_invoice["status"] = invoice_status.value if invoice_status else invoice_data.get("status", "draft")
+
+                print(f"Mapped invoice data: {db_invoice}")
             case _:
                 # logger.warning("Unhandled event: %s", event)
                 return JSONResponse(content={"status": "success"})
