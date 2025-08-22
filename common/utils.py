@@ -400,3 +400,23 @@ def calculate_foreclosure_details(
         "other_charges": other_charges,
         "total_charges": total_charges
     }
+    
+def map_razorpay_invoice_to_db(invoice_json, emi_number: int, payment_detail_id: int = None, subscription_id: int = None):
+    return {
+        "razorpay_invoice_id":invoice_json["id"],
+        "subscription_id":subscription_id,  # map your internal subscription_id if you track it
+        "payment_detail_id":payment_detail_id,
+        "entity":invoice_json.get("entity", "invoice"),
+        "amount":invoice_json.get("amount", 0) / 100 if invoice_json.get("amount") else 0,  # if Razorpay returns paise
+        "currency":invoice_json.get("currency", "INR"),
+        "status":invoice_json.get("status", "draft"),
+        "emi_number":emi_number,
+        "due_date":invoice_json.get("billing_end"),  # use Razorpay billing_end as due_date
+        "issued_at":invoice_json.get("issued_at"),
+        "paid_at":invoice_json.get("paid_at"),
+        'expired_at':invoice_json.get("expired_at"),
+        "short_url":invoice_json.get("short_url"),
+        "customer_notify":True,  # set based on your flow
+        "notes":str(invoice_json.get("notes", [])),
+        "invoice_data":invoice_json,  # store full JSON for flexibility
+    }

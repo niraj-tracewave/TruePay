@@ -113,6 +113,8 @@ async def razorpay_webhook(request: Request):
                 except Exception as e:
                         print(f"Error processing payment_link.paid event: {e}")
 
+            case event if event.startswith("invoice."):
+                pass
             case _:
                 # logger.warning("Unhandled event: %s", event)
                 return JSONResponse(content={"status": "success"})
