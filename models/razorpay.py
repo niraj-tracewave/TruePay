@@ -1,5 +1,5 @@
 from common.enums import SubscriptionStatus
-from sqlalchemy import Column, Integer, Enum, String, Float, ForeignKey, DateTime, Text, Boolean, JSON, BigInteger
+from sqlalchemy import Column, Integer, Enum, String, Float, ForeignKey, DateTime, Text, Boolean, JSON, BigInteger, CheckConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from db_domains import CreateUpdateTime, CreateByUpdateBy
@@ -77,6 +77,7 @@ class Subscription(CreateUpdateTime, CreateByUpdateBy):
     customer = relationship("Customer", back_populates="subscriptions")
     plan = relationship("Plan", back_populates="subscriptions")
     foreclosures = relationship("ForeClosure", back_populates="subscription")
+    prepayment = relationship("PrePayment", back_populates="subscription")
     
     
 
@@ -93,12 +94,26 @@ class ForeClosure(CreateUpdateTime, CreateByUpdateBy):
     subscription = relationship("Subscription", back_populates="foreclosures")
     payment_details = relationship("PaymentDetails", back_populates="foreclosure", uselist=False)
 
+class PrePayment(CreateUpdateTime, CreateByUpdateBy):
+    __tablename__ = "prepayment"
+
+    id = Column(Integer, primary_key=True, index=True)
+    subscription_id = Column(Integer, ForeignKey("subscriptions.id"), nullable=False)
+    amount = Column(Float, nullable=False)  # Amount in INR
+    reason = Column(Text, nullable=True)
+    emi_stepper = Column(Integer)
+    status = Column(Enum("pending", "approved", "rejected", name="prepayment_status"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    subscription = relationship("Subscription", back_populates="prepayment")
+    payment_details = relationship("PaymentDetails", back_populates="prepayment", uselist=False)
     
 class PaymentDetails(CreateUpdateTime, CreateByUpdateBy):
     __tablename__ = "payment_details"
 
     id = Column(Integer, primary_key=True, index=True)
-    foreclosure_id = Column(Integer, ForeignKey("foreclosures.id"), nullable=False)
+    foreclosure_id = Column(Integer, ForeignKey("foreclosures.id"), nullable=True)
+    prepayment_id = Column(Integer, ForeignKey("prepayment.id"), nullable=True)
     payment_id = Column(String, unique=True, nullable=False)
     amount = Column(Float, nullable=False)  # Amount in INR
     currency = Column(String, default="INR")
@@ -107,3 +122,16 @@ class PaymentDetails(CreateUpdateTime, CreateByUpdateBy):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     foreclosure = relationship("ForeClosure", back_populates="payment_details")
+    prepayment = relationship("PrePayment", back_populates="payment_details")
+    
+    
+    __table_args__ = (
+        CheckConstraint(
+            "(foreclosure_id IS NOT NULL) OR (prepayment_id IS NOT NULL)",
+            name="check_foreclosure_or_prepayment_not_null"
+        ),
+        CheckConstraint(
+            "NOT (foreclosure_id IS NOT NULL AND prepayment_id IS NOT NULL)",
+            name="check_only_one_of_foreclosure_or_prepayment"
+        ),
+    )

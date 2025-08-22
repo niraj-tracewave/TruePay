@@ -33,7 +33,7 @@ class WebhookDBService:
             return True
 
     @staticmethod
-    def update_payment_link_status(payment_link_id: str, status: str) -> bool:
+    def update_payment_link_status(payment_link_id: str, status: str, description_flag: any) -> bool:
         try:
             if not payment_link_id:
                 print("⚠ No payment link ID provided.")
@@ -56,24 +56,44 @@ class WebhookDBService:
 
                 # Update PaymentDetails status
                 payment_data.status = status
-
-                # Fetch related subscription
-                subscription = payment_data.foreclosure.subscription if payment_data.foreclosure else None
-                if subscription:
-                    subscription_id = subscription.id
-                    razorpay_subscription_id = subscription.razorpay_subscription_id
-                    print(
-                        f"Found Subscription ID: {subscription_id}, Razorpay ID: {razorpay_subscription_id}")
-
-                    # Map payment status to subscription status
-                    if status == "paid":
-                        subscription.status = "cancelled"
+                
+                if description_flag == "forclosure_payment":
+                    # Fetch related subscription
+                    subscription = payment_data.foreclosure.subscription if payment_data.foreclosure else None
+                    if subscription:
+                        subscription_id = subscription.id
+                        razorpay_subscription_id = subscription.razorpay_subscription_id
                         print(
-                            f"Subscription {razorpay_subscription_id} status set to 'cancelled'")
-                        # change loan status
-                        loan = payment_data.foreclosure.subscription.plan.applicant
-                        if loan:
-                            loan.status = "COMPLETED"
+                            f"Found Subscription ID: {subscription_id}, Razorpay ID: {razorpay_subscription_id}")
+
+                        # Map payment status to subscription status
+                        if status == "paid":
+                            subscription.status = "cancelled"
+                            print(
+                                f"Subscription {razorpay_subscription_id} status set to 'cancelled'")
+                            # change loan status
+                            loan = payment_data.foreclosure.subscription.plan.applicant
+                            if loan:
+                                loan.status = "COMPLETED"
+                elif description_flag == "pre_payment":
+                    subscription = payment_data.prepayment.subscription if payment_data.prepayment else None
+                    if subscription:
+                        subscription_id = subscription.id
+                        razorpay_subscription_id = subscription.razorpay_subscription_id
+                        print(
+                            f"Found Subscription ID: {subscription_id}, Razorpay ID: {razorpay_subscription_id}")
+
+                        # Map payment status to subscription status
+                        if status == "paid":
+                            subscription.status = "paused"
+                            print(
+                                f"Subscription {razorpay_subscription_id} status set to 'paused'")
+                            # change loan status
+                            # loan = payment_data.foreclosure.subscription.plan.applicant
+                            # if loan:
+                            #     loan.status = "PAUSED_PAYMENT_AS_PRE_PAYMENT"
+
+                
 
                 else:
                     print(
@@ -83,7 +103,7 @@ class WebhookDBService:
                 session.commit()
 
                 # Call external API after DB commit
-                if status == "paid" and subscription:
+                if status == "paid" and subscription and description_flag == "forclosure_payment":
                     try:
                         razorpay_service_obj.cancel_subscription(
                             razorpay_subscription_id)
@@ -91,6 +111,14 @@ class WebhookDBService:
                             f"Subscription {razorpay_subscription_id} cancelled in Razorpay.")
                     except Exception as api_exc:
                         print(f"⚠ Razorpay cancellation failed: {api_exc}")
+                elif status == "paid" and subscription and description_flag == "pre_payment":
+                    try:
+                        razorpay_service_obj.pause_subscription(
+                            razorpay_subscription_id)
+                        print(
+                            f"Subscription {razorpay_subscription_id} paused in Razorpay.")
+                    except Exception as api_exc:
+                        print(f"⚠ Razorpay Pause failed: {api_exc}")
 
                 print(f"Payment Link {payment_link_id} updated to '{status}'")
                 return True

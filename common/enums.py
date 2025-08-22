@@ -91,6 +91,8 @@ class SubscriptionStatus(str, Enum):
     ACTIVE = "active"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
+    PAUSED = "paused"
+    RESUMED = "resumed"
     AUTHENTICATED = "authenticated"
 
 class PaymentType(str, Enum):
