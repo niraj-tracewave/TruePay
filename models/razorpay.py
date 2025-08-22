@@ -1,4 +1,4 @@
-from common.enums import SubscriptionStatus
+from common.enums import SubscriptionStatus, InvoiceStatus
 from sqlalchemy import Column, Integer, Enum, String, Float, ForeignKey, DateTime, Text, Boolean, JSON, BigInteger, CheckConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -78,6 +78,7 @@ class Subscription(CreateUpdateTime, CreateByUpdateBy):
     plan = relationship("Plan", back_populates="subscriptions")
     foreclosures = relationship("ForeClosure", back_populates="subscription")
     prepayment = relationship("PrePayment", back_populates="subscription")
+    invoices = relationship("Invoice", back_populates="subscription")
     
     
 
@@ -123,6 +124,7 @@ class PaymentDetails(CreateUpdateTime, CreateByUpdateBy):
 
     foreclosure = relationship("ForeClosure", back_populates="payment_details")
     prepayment = relationship("PrePayment", back_populates="payment_details")
+    invoices = relationship("Invoice", back_populates="payment_details")
     
     
     __table_args__ = (
@@ -135,3 +137,29 @@ class PaymentDetails(CreateUpdateTime, CreateByUpdateBy):
             name="check_only_one_of_foreclosure_or_prepayment"
         ),
     )
+    
+
+class Invoice(CreateUpdateTime, CreateByUpdateBy):
+    __tablename__ = "invoices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    subscription_id = Column(Integer, ForeignKey("subscriptions.id"), nullable=True, index=True)
+    payment_detail_id = Column(Integer, ForeignKey("payment_details.id"), nullable=True, index=True)
+    razorpay_invoice_id = Column(String, unique=True, nullable=False)
+    entity = Column(String, nullable=True, default="invoice")
+    amount = Column(Float, nullable=False)  # Amount in INR
+    currency = Column(String, default="INR")
+    status = Column(Enum(InvoiceStatus), nullable=False)  # e.g., draft, issued, paid, partially_paid, cancelled, expired
+    emi_number = Column(Integer, nullable=False)  # Tracks EMI sequence (e.g., 1 for first EMI, 2 for second)
+    due_date = Column(BigInteger, nullable=True)  # Unix timestamp for due date
+    issued_at = Column(BigInteger, nullable=True)  # Unix timestamp when invoice was issued
+    paid_at = Column(BigInteger, nullable=True)  # Unix timestamp when invoice was paid
+    expired_at = Column(BigInteger, nullable=True)  # Unix timestamp when invoice expired
+    short_url = Column(String, nullable=True)  # Payment link for the invoice
+    customer_notify = Column(Boolean, default=True)  # Whether customer was notified
+    notes = Column(Text, nullable=True)  # Additional notes or metadata
+    invoice_data = Column(JSON, nullable=True)  # Full Razorpay invoice payload for flexibility
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    subscription = relationship("Subscription", back_populates="invoices")
+    payment_details = relationship("PaymentDetails", back_populates="invoices")
