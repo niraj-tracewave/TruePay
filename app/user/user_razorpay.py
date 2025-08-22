@@ -311,8 +311,29 @@ def get_subscription(subscription_id: str, service: RazorpayService = Depends(ge
                     "error": str(e)
                 }
             }
-           
+
 @router.get("/get-subscription-invoices/{subscription_id}")
+def get_subscription_invoices(subscription_id: str, service: RazorpayService = Depends(get_razorpay_service), count: int = 10, skip: int = 0):
+    """
+    Fetch all invoices for a given subscription with optional pagination params.
+    """
+    try:
+        invoices = service.fetch_invoices_for_subscription(subscription_id, count=count, skip=skip)
+        return {
+            "success": True,
+            "message": "Invoices fetched successfully!",
+            "status_code": status.HTTP_200_OK,
+            "data": {"invoices": invoices}
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": "Failed to fetch invoices",
+            "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "data": {"error": str(e)}
+        }
+ 
+@router.get("/get-subscription-actual-invoices/{subscription_id}")
 def get_subscription_invoices(subscription_id: str, service: RazorpayService = Depends(get_razorpay_service), count: int = 10, skip: int = 0):
     """
     Fetch all invoices for a given subscription with optional pagination params.
