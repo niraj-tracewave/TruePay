@@ -6,7 +6,7 @@ from starlette import status
 from db_domains.db import DBSession
 from sqlalchemy.orm import selectinload
 from models.loan import LoanApplicant, EmiScheduleDate
-from models.razorpay import Plan, Subscription
+from models.razorpay import Plan, Subscription,  Invoice
 from services.plan_service import PlanService
 from services.subscription_service import SubscriptionService
 from services.foreclosure_service import ForeClosureService
@@ -14,9 +14,10 @@ from services.prepayment_service import PrePaymentService
 from services.payment_details_service import PaymentDetailsService
 from services.loan_service.user_loan import UserLoanService
 from services.razorpay_service import RazorpayService
+from services.invoice_service import InvoiceService
 from services.dependencies import get_razorpay_service
 from schemas.razorpay_schema import CreatePlanSchema, CreateSubscriptionSchema
-from common.utils import calculate_emi_schedule
+from common.utils import calculate_emi_schedule, map_razorpay_invoice_to_db
 from fastapi.responses import JSONResponse
 from db_domains.db_interface import DBInterface
 
@@ -310,25 +311,73 @@ def get_subscription(subscription_id: str, service: RazorpayService = Depends(ge
                     "error": str(e)
                 }
             }
-        
+           
 @router.get("/get-subscription-invoices/{subscription_id}")
 def get_subscription_invoices(subscription_id: str, service: RazorpayService = Depends(get_razorpay_service), count: int = 10, skip: int = 0):
     """
     Fetch all invoices for a given subscription with optional pagination params.
     """
     try:
-        invoices = service.fetch_invoices_for_subscription(subscription_id, count=count, skip=skip)
+        razorpay_invoices = service.fetch_invoices_for_subscription(subscription_id, count=count, skip=skip)
+        #NOTE: Create or Update Invoices inside Invoice Table
+        invoice_service = InvoiceService(DBInterface(Invoice))
+        with DBSession() as session:
+            # Find the database subscription ID
+            subscription = session.query(Subscription).filter_by(
+                razorpay_subscription_id=subscription_id,
+                is_deleted=False
+            ).first()
+            if not subscription:
+                return {
+                    "success": False,
+                    "message": f"Subscription {subscription_id} not found",
+                    "status_code": status.HTTP_404_NOT_FOUND,
+                    "data": {"error": f"Subscription {subscription_id} not found"}
+                }
+                
+            # Process each invoice: create or update
+            emi_number = 1
+            for invoice_data in razorpay_invoices.get("items"):
+                razorpay_invoice_id = invoice_data.get("id")
+                if not razorpay_invoice_id:
+                    print("Skipping invoice with no ID")
+                    continue
+               
+                # Prepare invoice data
+                invoice_common_data = map_razorpay_invoice_to_db(invoice_json=invoice_data, emi_number=emi_number, payment_detail_id=None, subscription_id=subscription.id)
+                
+                # Check for existing invoice
+                existing_invoice = session.query(Invoice).filter_by(
+                    razorpay_invoice_id=razorpay_invoice_id,
+                    is_deleted=False
+                ).first()
+
+                if not existing_invoice:
+                    print(f"Creating new invoice: {razorpay_invoice_id}")
+                    data = invoice_service.create_invoice(invoice_common_data)
+                else:
+                    print(f"Updating existing invoice: {razorpay_invoice_id}")
+                    update_data = {k: v for k, v in invoice_common_data.items() if v is not None}
+                    data = invoice_service.update_invoice(
+                        invoice_id=existing_invoice.id,
+                        form_data=update_data
+                    )
+                emi_number+=1
+            # Fetch All existed EMI Invoices 
+            invoices = invoice_service.get_all_invoices(subscription_id=subscription.id)   
+            #NOTE Fetch all payment.subscription invoice as well
+                
         return {
             "success": True,
             "message": "Invoices fetched successfully!",
             "status_code": status.HTTP_200_OK,
-            "data": {"invoices": invoices}
+            "data": invoices
         }
     except Exception as e:
         return {
             "success": False,
             "message": "Failed to fetch invoices",
-            "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "status_code": 500,
             "data": {"error": str(e)}
         }
 

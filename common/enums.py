@@ -100,3 +100,11 @@ class PaymentType(str, Enum):
     CASH = "CASH"
     CHEQUE = "CHEQUE"
     UPI = "UPI"
+
+class InvoiceStatus(str, Enum):
+    DRAFT = "draft"
+    ISSUED = "issued"
+    PAID = "paid"
+    PARTIALLY_PAID = "partially_paid"
+    CANCELLED = "cancelled"
+    EXPIRED = "expired"
