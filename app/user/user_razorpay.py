@@ -365,6 +365,7 @@ def get_subscription_invoices(subscription_id: str, service: RazorpayService = D
                 emi_number+=1
             # Fetch All existed EMI Invoices 
             invoices = invoice_service.get_all_invoices(subscription_id=subscription.id)   
+            #NOTE Fetch all payment.subscription invoice as well
                 
         return {
             "success": True,
