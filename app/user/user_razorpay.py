@@ -6,7 +6,8 @@ from starlette import status
 from db_domains.db import DBSession
 from sqlalchemy.orm import selectinload
 from models.loan import LoanApplicant, EmiScheduleDate
-from models.razorpay import Plan, Subscription,  Invoice
+from models.razorpay import Plan, Subscription,  Invoice, ForeClosure, PrePayment
+from services import razorpay_service
 from services.plan_service import PlanService
 from services.subscription_service import SubscriptionService
 from services.foreclosure_service import ForeClosureService
@@ -17,7 +18,7 @@ from services.razorpay_service import RazorpayService
 from services.invoice_service import InvoiceService
 from services.dependencies import get_razorpay_service
 from schemas.razorpay_schema import CreatePlanSchema, CreateSubscriptionSchema
-from common.utils import calculate_emi_schedule, map_razorpay_invoice_to_db
+from common.utils import calculate_emi_schedule, map_razorpay_invoice_to_db, map_payment_link_to_invoice_obj
 from fastapi.responses import JSONResponse
 from db_domains.db_interface import DBInterface
 
@@ -344,10 +345,19 @@ def get_subscription_invoices(subscription_id: str, service: RazorpayService = D
         invoice_service = InvoiceService(DBInterface(Invoice))
         with DBSession() as session:
             # Find the database subscription ID
-            subscription = session.query(Subscription).filter_by(
-                razorpay_subscription_id=subscription_id,
-                is_deleted=False
-            ).first()
+            subscription = (
+                session.query(Subscription)
+                .options(
+                    selectinload(Subscription.foreclosures).selectinload(ForeClosure.payment_details),
+                    selectinload(Subscription.prepayment).selectinload(PrePayment.payment_details),
+                    selectinload(Subscription.invoices).selectinload(Invoice.payment_details),
+                )
+                .filter_by(
+                    razorpay_subscription_id=subscription_id,
+                    is_deleted=False
+                )
+                .first()
+            )
             if not subscription:
                 return {
                     "success": False,
@@ -385,8 +395,67 @@ def get_subscription_invoices(subscription_id: str, service: RazorpayService = D
                     )
                 emi_number+=1
             # Fetch All existed EMI Invoices 
-            invoices = invoice_service.get_all_invoices(subscription_id=subscription.id)   
             #NOTE Fetch all payment.subscription invoice as well
+            # Lets fetch Foreclosure and Pre-payment invoice details       
+            sub_foreclosure = subscription.foreclosures
+            sub_pre_payments =  subscription.prepayment
+            
+            for foreclosure in sub_foreclosure:
+                foreclosure_payment_links = foreclosure.payment_details
+                payment_details = service.get_payment_link_details(foreclosure_payment_links.payment_id) 
+                # check status 
+                if payment_details.get("status") == "paid":
+                    create_prepayment_invoice = map_payment_link_to_invoice_obj(payment=payment_details,
+                                                                                emi_number=1,
+                                                                                payment_detail_id = foreclosure_payment_links.id,
+                                                                                subscription_id=subscription.id,
+                                                                                invoice_type="foreclosure"
+                                                                                )
+                    # Check for existing invoice
+                    existing_invoice_1 = session.query(Invoice).filter_by(
+                        razorpay_invoice_id=create_prepayment_invoice.get("razorpay_invoice_id"),
+                        subscription_id=subscription.id,
+                        is_deleted=False
+                    ).first()
+                    if not existing_invoice_1:
+                        print(f"Creating new invoice: {razorpay_invoice_id}")
+                        data = invoice_service.create_invoice(create_prepayment_invoice)
+                    else:
+                        print(f"Updating existing invoice: {razorpay_invoice_id}")
+                        update_data = {k: v for k, v in create_prepayment_invoice.items() if v is not None}
+                        data = invoice_service.update_invoice(
+                            invoice_id=existing_invoice_1.id,
+                            form_data=update_data
+                        )
+                    
+                                    
+            for pre_payments in sub_pre_payments:
+                pre_payments_payment_links = pre_payments.payment_details
+                payment_details = service.get_payment_link_details(pre_payments_payment_links.payment_id) 
+                if payment_details.get("status") == "paid":
+                    create_prepayment_invoice = map_payment_link_to_invoice_obj(payment=payment_details,
+                                                                                emi_number=1,
+                                                                                payment_detail_id = pre_payments_payment_links.id,
+                                                                                subscription_id=subscription.id,
+                                                                                invoice_type="pre_payment"
+                                                                                )
+                    # Check for existing invoice
+                    existing_invoice_1 = session.query(Invoice).filter_by(
+                        razorpay_invoice_id=create_prepayment_invoice.get("razorpay_invoice_id"),
+                        subscription_id=subscription.id,
+                        is_deleted=False
+                    ).first()
+                    if not existing_invoice_1:
+                        print(f"Creating new invoice: {razorpay_invoice_id}")
+                        data = invoice_service.create_invoice(create_prepayment_invoice)
+                    else:
+                        print(f"Updating existing invoice: {razorpay_invoice_id}")
+                        update_data = {k: v for k, v in create_prepayment_invoice.items() if v is not None}
+                        data = invoice_service.update_invoice(
+                            invoice_id=existing_invoice_1.id,
+                            form_data=update_data
+                        )
+            invoices = invoice_service.get_all_invoices(subscription_id=subscription.id)   
                 
         return {
             "success": True,

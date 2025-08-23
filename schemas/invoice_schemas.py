@@ -23,6 +23,7 @@ class InvoiceCreateSchema(BaseModel):
     customer_notify: bool = True
     notes: Optional[str] = None
     invoice_data: Optional[dict] = None
+    invoice_type: str
 
 
 class InvoiceUpdateSchema(BaseModel):
@@ -42,6 +43,8 @@ class InvoiceUpdateSchema(BaseModel):
     customer_notify: Optional[bool] = None
     notes: Optional[str] = None
     invoice_data: Optional[dict] = None
+    invoice_type: str
+    
 
 
 class InvoiceResponseSchema(BaseModel):
@@ -67,6 +70,8 @@ class InvoiceResponseSchema(BaseModel):
     modified_at: Optional[datetime]
     modified_by: Optional[str]
     is_deleted: bool
+    invoice_type: str
+    
 
     class Config:
         from_attributes = True
