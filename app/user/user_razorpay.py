@@ -418,7 +418,6 @@ def get_subscription_invoices(subscription_id: str, service: RazorpayService = D
                     ).first()
                     if not existing_invoice_1:
                         print(f"Creating new invoice: {razorpay_invoice_id}")
-                        breakpoint()
                         data = invoice_service.create_invoice(create_prepayment_invoice)
                     else:
                         print(f"Updating existing invoice: {razorpay_invoice_id}")
@@ -446,7 +445,6 @@ def get_subscription_invoices(subscription_id: str, service: RazorpayService = D
                     ).first()
                     if not existing_invoice_1:
                         print(f"Creating new invoice: {razorpay_invoice_id}")
-                        breakpoint()
                         data = invoice_service.create_invoice(create_prepayment_invoice)
                     else:
                         print(f"Updating existing invoice: {razorpay_invoice_id}")

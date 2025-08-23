@@ -141,7 +141,7 @@ async def razorpay_webhook(request: Request):
                         print(f"Unsupported invoice event: {event}")
                         invoice_status = None  # or handle as needed
                 
-                breakpoint() #NOTE WIP
+                #NOTE WIP
                 payment_detail_id = invoice_data.get("payment_id")  # e.g., "pay_R8OMiogb7wcP1w"
                 subscription_id = invoice_data.get("subscription_id")  # e.g., "sub_R7ydKxyc2QrqUV"
                 emi_number = 1  # Example: Set based on your business logic
