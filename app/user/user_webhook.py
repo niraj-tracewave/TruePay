@@ -142,21 +142,21 @@ async def razorpay_webhook(request: Request):
                         invoice_status = None  # or handle as needed
                 
                 #NOTE WIP
-                payment_detail_id = invoice_data.get("payment_id")  # e.g., "pay_R8OMiogb7wcP1w"
-                subscription_id = invoice_data.get("subscription_id")  # e.g., "sub_R7ydKxyc2QrqUV"
-                emi_number = 1  # Example: Set based on your business logic
+                # payment_detail_id = invoice_data.get("payment_id")  # e.g., "pay_R8OMiogb7wcP1w"
+                # subscription_id = invoice_data.get("subscription_id")  # e.g., "sub_R7ydKxyc2QrqUV"
+                # emi_number = 1  # Example: Set based on your business logic
                     
-                # Map to database format
-                db_invoice = map_razorpay_invoice_to_db(
-                    invoice_json=invoice_data,
-                    emi_number=emi_number,
-                    payment_detail_id=None,
-                    subscription_id=subscription_id if subscription_id else None
-                )
-                # Update status based on event if needed
-                db_invoice["status"] = invoice_status.value if invoice_status else invoice_data.get("status", "draft")
+                # # Map to database format
+                # db_invoice = map_razorpay_invoice_to_db(
+                #     invoice_json=invoice_data,
+                #     emi_number=emi_number,
+                #     payment_detail_id=None,
+                #     subscription_id=subscription_id if subscription_id else None
+                # )
+                # # Update status based on event if needed
+                # db_invoice["status"] = invoice_status.value if invoice_status else invoice_data.get("status", "draft")
 
-                print(f"Mapped invoice data: {db_invoice}")
+                # print(f"Mapped invoice data: {db_invoice}")
             case _:
                 # logger.warning("Unhandled event: %s", event)
                 return JSONResponse(content={"status": "success"})
