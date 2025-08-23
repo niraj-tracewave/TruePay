@@ -404,8 +404,29 @@ def get_subscription_invoices(subscription_id: str, service: RazorpayService = D
                 foreclosure_payment_links = foreclosure.payment_details
                 payment_details = service.get_payment_link_details(foreclosure_payment_links.payment_id) 
                 # check status 
-                if payment_details:
-                    payment_link = payment_details.get("payment_link")
+                if payment_details.get("status") == "paid":
+                    create_prepayment_invoice = map_payment_link_to_invoice_obj(payment=payment_details,
+                                                                                emi_number=1,
+                                                                                payment_detail_id = foreclosure_payment_links.id,
+                                                                                subscription_id=subscription.id
+                                                                                )
+                    # Check for existing invoice
+                    existing_invoice_1 = session.query(Invoice).filter_by(
+                        razorpay_invoice_id=create_prepayment_invoice.get("razorpay_invoice_id"),
+                        subscription_id=subscription.id,
+                        is_deleted=False
+                    ).first()
+                    if not existing_invoice_1:
+                        print(f"Creating new invoice: {razorpay_invoice_id}")
+                        breakpoint()
+                        data = invoice_service.create_invoice(create_prepayment_invoice)
+                    else:
+                        print(f"Updating existing invoice: {razorpay_invoice_id}")
+                        update_data = {k: v for k, v in create_prepayment_invoice.items() if v is not None}
+                        data = invoice_service.update_invoice(
+                            invoice_id=existing_invoice_1.id,
+                            form_data=update_data
+                        )
                     
                                     
             for pre_payments in sub_pre_payments:
