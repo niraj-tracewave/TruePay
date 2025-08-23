@@ -420,3 +420,30 @@ def map_razorpay_invoice_to_db(invoice_json, emi_number: int, payment_detail_id:
         "notes":str(invoice_json.get("notes", [])),
         "invoice_data":invoice_json,  # store full JSON for flexibility
     }
+    
+def map_payment_link_to_invoice_obj(payment: dict, emi_number: int = 1,
+                                    payment_detail_id: int = None,
+                                    subscription_id: int = None):
+    if payment.get("status") != "paid":
+        return None  
+
+    payments = payment.get("payments", [])
+    payment_obj = payments[0] if payments else {}
+    return {
+        "razorpay_invoice_id": payment_obj.get("payment_id"),
+        "subscription_id": subscription_id,
+        "payment_detail_id": payment_detail_id,
+        "entity": "invoice",
+        "amount": payment.get("amount_paid", 0) / 100 if payment.get("amount_paid") else 0,
+        "currency": payment.get("currency", "INR"),
+        "status": "paid",
+        "emi_number": emi_number,
+        "due_date": payment.get("expire_by") or payment.get("expired_at"),
+        "issued_at": payment.get("created_at"),      # when link was created
+        "paid_at": payment_obj.get("created_at"),    # when payment was captured
+        "expired_at": payment.get("expired_at"),
+        "short_url": payment.get("short_url"),
+        "customer_notify": payment.get("notify", {}).get("email", True),
+        "notes": str(payment.get("notes", {})),
+        "invoice_data": payment,
+    }
