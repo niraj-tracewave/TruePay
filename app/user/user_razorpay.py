@@ -437,7 +437,7 @@ def get_subscription_invoices(subscription_id: str, service: RazorpayService = D
                                                                                 emi_number=1,
                                                                                 payment_detail_id = pre_payments_payment_links.id,
                                                                                 subscription_id=subscription.id,
-                                                                                invoice_type="pre_payment"
+                                                                                invoice_type="pre_payment" if pre_payments.is_due_payment == False else "due_payment"
                                                                                 )
                     # Check for existing invoice
                     existing_invoice_1 = session.query(Invoice).filter_by(
