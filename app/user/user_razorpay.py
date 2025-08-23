@@ -725,7 +725,7 @@ def get_payment_details(payment_id: str, service: RazorpayService = Depends(get_
         
         
 @router.get("/get-pre-payment-link/{subscription_id}")
-def get_closure_payment_link(
+def get_pre_payment_link(
     subscription_id: str,
     callback_url: str = Query(..., description="URL to redirect after payment"),
     is_due_payment: bool = Query(..., description="Checks if its Pre-Payment or Due-Payment"),
