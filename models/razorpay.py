@@ -4,6 +4,13 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from db_domains import CreateUpdateTime, CreateByUpdateBy
 
+from enum import Enum as PyEnum   # <-- Python Enum
+from sqlalchemy import Enum       # <-- SQLAlchemy Enum
+
+class InvoiceType(str, PyEnum):   # <-- Use PyEnum here
+    FORECLOSURE = "foreclosure"
+    PRE_PAYMENT = "pre_payment"
+    EMI = "emi"
 
 class Customer(CreateUpdateTime, CreateByUpdateBy):
     __tablename__ = "customers"
@@ -160,6 +167,7 @@ class Invoice(CreateUpdateTime, CreateByUpdateBy):
     notes = Column(Text, nullable=True)  # Additional notes or metadata
     invoice_data = Column(JSON, nullable=True)  # Full Razorpay invoice payload for flexibility
     created_at = Column(DateTime, default=datetime.utcnow)
+    invoice_type =  Column(Enum(InvoiceType), nullable=True, default="emi")
 
     subscription = relationship("Subscription", back_populates="invoices")
     payment_details = relationship("PaymentDetails", back_populates="invoices")

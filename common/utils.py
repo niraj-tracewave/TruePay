@@ -419,11 +419,15 @@ def map_razorpay_invoice_to_db(invoice_json, emi_number: int, payment_detail_id:
         "customer_notify":True,  # set based on your flow
         "notes":str(invoice_json.get("notes", [])),
         "invoice_data":invoice_json,  # store full JSON for flexibility
+        "invoice_type":"emi"
     }
     
-def map_payment_link_to_invoice_obj(payment: dict, emi_number: int = 1,
+def map_payment_link_to_invoice_obj(payment: dict, 
+                                    invoice_type: str,
+                                    emi_number: int = 1,
                                     payment_detail_id: int = None,
-                                    subscription_id: int = None):
+                                    subscription_id: int = None,
+                                    ):
     if payment.get("status") != "paid":
         return None  
 
@@ -446,4 +450,5 @@ def map_payment_link_to_invoice_obj(payment: dict, emi_number: int = 1,
         "customer_notify": payment.get("notify", {}).get("email", True),
         "notes": str(payment.get("notes", {})),
         "invoice_data": payment,
+        "invoice_type": invoice_type
     }

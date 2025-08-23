@@ -408,7 +408,8 @@ def get_subscription_invoices(subscription_id: str, service: RazorpayService = D
                     create_prepayment_invoice = map_payment_link_to_invoice_obj(payment=payment_details,
                                                                                 emi_number=1,
                                                                                 payment_detail_id = foreclosure_payment_links.id,
-                                                                                subscription_id=subscription.id
+                                                                                subscription_id=subscription.id,
+                                                                                invoice_type="foreclosure"
                                                                                 )
                     # Check for existing invoice
                     existing_invoice_1 = session.query(Invoice).filter_by(
@@ -435,7 +436,8 @@ def get_subscription_invoices(subscription_id: str, service: RazorpayService = D
                     create_prepayment_invoice = map_payment_link_to_invoice_obj(payment=payment_details,
                                                                                 emi_number=1,
                                                                                 payment_detail_id = pre_payments_payment_links.id,
-                                                                                subscription_id=subscription.id
+                                                                                subscription_id=subscription.id,
+                                                                                invoice_type="pre_payment"
                                                                                 )
                     # Check for existing invoice
                     existing_invoice_1 = session.query(Invoice).filter_by(
