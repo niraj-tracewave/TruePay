@@ -10,6 +10,7 @@ from sqlalchemy import Enum       # <-- SQLAlchemy Enum
 class InvoiceType(str, PyEnum):   # <-- Use PyEnum here
     FORECLOSURE = "foreclosure"
     PRE_PAYMENT = "pre_payment"
+    DUE_PAYMENT = "due_payment"
     EMI = "emi"
 
 class Customer(CreateUpdateTime, CreateByUpdateBy):
@@ -112,6 +113,7 @@ class PrePayment(CreateUpdateTime, CreateByUpdateBy):
     emi_stepper = Column(Integer)
     status = Column(Enum("pending", "approved", "rejected", name="prepayment_status"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    is_due_payment = Column(Boolean, default=False)
 
     subscription = relationship("Subscription", back_populates="prepayment")
     payment_details = relationship("PaymentDetails", back_populates="prepayment", uselist=False)

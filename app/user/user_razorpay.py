@@ -437,7 +437,7 @@ def get_subscription_invoices(subscription_id: str, service: RazorpayService = D
                                                                                 emi_number=1,
                                                                                 payment_detail_id = pre_payments_payment_links.id,
                                                                                 subscription_id=subscription.id,
-                                                                                invoice_type="pre_payment"
+                                                                                invoice_type="pre_payment" if pre_payments.is_due_payment == False else "due_payment"
                                                                                 )
                     # Check for existing invoice
                     existing_invoice_1 = session.query(Invoice).filter_by(
@@ -725,9 +725,10 @@ def get_payment_details(payment_id: str, service: RazorpayService = Depends(get_
         
         
 @router.get("/get-pre-payment-link/{subscription_id}")
-def get_closure_payment_link(
+def get_pre_payment_link(
     subscription_id: str,
     callback_url: str = Query(..., description="URL to redirect after payment"),
+    is_due_payment: bool = Query(..., description="Checks if its Pre-Payment or Due-Payment"),
     service: RazorpayService = Depends(get_razorpay_service)
 ):
     try:
@@ -828,9 +829,10 @@ def get_closure_payment_link(
                 payment = service.create_payment_link(
                     amount=emi_amount_each_month * 100,
                     currency="INR",
-                    description="pre_payment",
+                    description="pre_payment" if is_due_payment == False else "due_payment",
                     subscription_id=ref_id,
-                    callback_url=callback_url
+                    callback_url=callback_url,
+                    is_due_payment=is_due_payment
                 )
                 if not payment:
                     raise ValueError("Failed to create payment link")
@@ -855,7 +857,8 @@ def get_closure_payment_link(
             "amount": emi_amount_each_month,
             "reason": "Subscription Pre Payment",
             "status": "pending",
-            "emi_stepper": emi_stepper
+            "emi_stepper": emi_stepper,
+            "is_due_payment": is_due_payment
         }
         prepayment_response = pre_payment_service.create_pre_payment(pre_payment_data)
         if not prepayment_response['success']:
