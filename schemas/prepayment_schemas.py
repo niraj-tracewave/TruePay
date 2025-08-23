@@ -21,7 +21,8 @@ class PrePaymentCreateSchema(BaseModel):
     amount: float = Field(..., gt=0, description="Foreclosure amount in INR")
     reason: Optional[str] = Field(None, description="Reason for foreclosure")
     status: PrePaymentStatus = Field(..., description="Foreclosure status")
-    emi_stepper: int 
+    emi_stepper: int
+    is_due_payment: bool 
 
     class Config:
         from_attributes = True
@@ -48,6 +49,7 @@ class PrePaymentResponseSchema(BaseModel):
     reason: Optional[str] = Field(None, description="Reason for foreclosure")
     status: PrePaymentStatus = Field(..., description="Foreclosure status")
     emi_stepper: int
+    is_due_payment: bool
     
     class Config:
         from_attributes = True
