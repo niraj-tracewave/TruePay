@@ -279,10 +279,22 @@ def calculate_emi_schedule(
             principal_paid = round(emi - interest, 2)
             balance = round(balance - principal_paid, 2)
             balance = max(balance, 0)
+           # build IST datetime for EMI date
+            IST = timezone(timedelta(hours=5, minutes=30))
+            emi_dt = datetime(
+                year=month_date.year,
+                month=month_date.month,
+                day=int(emi_schedule_date),
+                hour=0, minute=0, second=0,
+                tzinfo=IST
+            )
 
+            # Unix timestamp in IST
+            unix_label = int(emi_dt.timestamp())
             schedule.append(
                 {
                     "month": label,
+                    "unix_label": unix_label,
                     "principal_paid": principal_paid,
                     "interest_paid": interest,
                     "emi": round(emi, 2),
