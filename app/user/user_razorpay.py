@@ -578,7 +578,9 @@ def get_subscription_invoices(loan_application_id: str, service: RazorpayService
             "success": True,
             "message": "emi_result fetched successfully!",
             "status_code": status.HTTP_200_OK,
-            "data":  schedule_data,
+            "data":  {
+                      "schedule_data": schedule_data
+                      },
         }
     except Exception as e:
         return {
