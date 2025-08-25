@@ -111,6 +111,7 @@ class PrePayment(CreateUpdateTime, CreateByUpdateBy):
     amount = Column(Float, nullable=False)  # Amount in INR
     reason = Column(Text, nullable=True)
     emi_stepper = Column(Integer)
+    billing_start = Column(BigInteger, nullable=True)  # Unix timestamp when invoice expired
     status = Column(Enum("pending", "approved", "rejected", name="prepayment_status"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     is_due_payment = Column(Boolean, default=False)
@@ -164,6 +165,7 @@ class Invoice(CreateUpdateTime, CreateByUpdateBy):
     issued_at = Column(BigInteger, nullable=True)  # Unix timestamp when invoice was issued
     paid_at = Column(BigInteger, nullable=True)  # Unix timestamp when invoice was paid
     expired_at = Column(BigInteger, nullable=True)  # Unix timestamp when invoice expired
+    billing_start = Column(BigInteger, nullable=True)  # Unix timestamp when invoice expired
     short_url = Column(String, nullable=True)  # Payment link for the invoice
     customer_notify = Column(Boolean, default=True)  # Whether customer was notified
     notes = Column(Text, nullable=True)  # Additional notes or metadata

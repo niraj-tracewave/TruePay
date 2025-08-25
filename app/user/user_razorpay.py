@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from fastapi import Request, Query
 from fastapi import APIRouter, Depends
 from starlette import status
@@ -18,9 +18,12 @@ from services.razorpay_service import RazorpayService
 from services.invoice_service import InvoiceService
 from services.dependencies import get_razorpay_service
 from schemas.razorpay_schema import CreatePlanSchema, CreateSubscriptionSchema
-from common.utils import calculate_emi_schedule, map_razorpay_invoice_to_db, map_payment_link_to_invoice_obj
+from common.utils import (calculate_emi_schedule, map_razorpay_invoice_to_db, map_payment_link_to_invoice_obj, 
+                          get_effective_processing_fee, get_effective_rate, unix_to_date)
 from fastapi.responses import JSONResponse
 from db_domains.db_interface import DBInterface
+from common.cache_string import gettext
+from schemas.loan_schemas import LoanApplicantResponseSchema
 
 
 
@@ -437,7 +440,7 @@ def get_subscription_invoices(subscription_id: str, service: RazorpayService = D
                                                                                 emi_number=1,
                                                                                 payment_detail_id = pre_payments_payment_links.id,
                                                                                 subscription_id=subscription.id,
-                                                                                invoice_type="pre_payment" if pre_payments.is_due_payment == False else "due_payment"
+                                                                                invoice_type="pre_payment" if pre_payments.is_due_payment == False else "due_payment",
                                                                                 )
                     # Check for existing invoice
                     existing_invoice_1 = session.query(Invoice).filter_by(
@@ -461,7 +464,9 @@ def get_subscription_invoices(subscription_id: str, service: RazorpayService = D
             "success": True,
             "message": "Invoices fetched successfully!",
             "status_code": status.HTTP_200_OK,
-            "data": invoices
+            "data": {
+                     "transactions": invoices
+                     }
         }
     except Exception as e:
         return {
@@ -471,6 +476,119 @@ def get_subscription_invoices(subscription_id: str, service: RazorpayService = D
             "data": {"error": str(e)}
         }
 
+@router.get("/get-schedule-data/{loan_application_id}")
+def get_subscription_invoices(loan_application_id: str, service: RazorpayService = Depends(get_razorpay_service), count: int = 10, skip: int = 0):
+    """
+    Fetch all invoices for a given subscription with optional pagination params.
+    """
+    try:
+        filters = [
+                LoanApplicant.id == loan_application_id,
+                LoanApplicant.is_deleted == False
+            ]
+        with DBSession() as session:
+            loan_with_docs = (
+                session.query(LoanApplicant)
+                .options(
+                     selectinload(LoanApplicant.documents),
+                        selectinload(LoanApplicant.bank_accounts),
+                        selectinload(LoanApplicant.approval_details),
+                    selectinload(LoanApplicant.credit_score_range_rate),
+                    selectinload(LoanApplicant.loan_disbursement),
+                    selectinload(LoanApplicant.loan_approved_document),
+                    selectinload(LoanApplicant.plans).selectinload(Plan.subscriptions).selectinload(Subscription.foreclosures).selectinload(ForeClosure.payment_details),
+                     selectinload(LoanApplicant.plans).selectinload(Plan.subscriptions).selectinload(Subscription.invoices).selectinload(Invoice.payment_details),
+                    )
+                .filter(*filters)
+                .first()
+            )
+            if not loan_with_docs:
+                return {
+                    "success": False,
+                    "message": gettext('not_found').format('Loan Application'),
+                    "status_code": status.HTTP_404_NOT_FOUND,
+                    "data": {}
+                }
+            emi_result = None                
+            effective_processing_fee = get_effective_processing_fee(loan_with_docs)
+            # loan_with_docs = loan_with_docs.__dict__.copy()
+            loan_response = LoanApplicantResponseSchema.model_validate(loan_with_docs).model_dump()
+            loan_response["effective_interest_rate"]= get_effective_rate(loan_with_docs)
+            
+            schedule_data = None
+            if loan_with_docs.approved_loan:
+                emi_result = calculate_emi_schedule(
+                    loan_amount=loan_with_docs.approved_loan,
+                    tenure_months=loan_with_docs.tenure_months,
+                    annual_interest_rate=loan_response["effective_interest_rate"],
+                    processing_fee=effective_processing_fee,
+                    is_fee_percentage=True,
+                    loan_type=loan_with_docs.loan_type,
+                    emi_start_day_atm=loan_with_docs.emi_start_day_atm,
+                    need_status=True
+                )
+
+                schedule_data = emi_result["data"].get("schedule")
+            invoice_date_mapper = []
+            for invoice in loan_with_docs.plans[0].subscriptions[0].invoices:
+                billing_start = unix_to_date(invoice.billing_start)
+                invoice_date_mapper.append({
+                    f"{billing_start}": {
+                                         "status": invoice.status,
+                                         "paid_at": unix_to_date(invoice.paid_at),
+                                         "invoice_type": invoice.invoice_type
+                                         }
+                })
+            # Flatten invoice_date_mapper into a dictionary for quick lookup
+            mapper = {list(d.keys())[0]: list(d.values())[0] for d in invoice_date_mapper}
+
+            # Update schedule_data status
+            for entry in schedule_data:
+                if entry["month"] in mapper:
+                    entry["status"] = mapper[entry["month"]].get("status")
+                    entry["paid_at"] = mapper[entry["month"]].get("paid_at")
+                    entry["available_for_pre_payment"] = False
+                    entry["invoice_type"] =  mapper[entry["month"]].get("invoice_type")
+            
+            
+            #LOGIC:  available_for_pre_payment = True
+            last_paid_entry = None
+            last_issued_unpaid_entry = None
+
+            # Find last paid & last issued-but-unpaid
+            for entry in schedule_data:
+                if entry.get("status") == "paid" and entry.get("paid_at") is not None:
+                    last_paid_entry = entry
+                if entry.get("status") == "issued" and not entry.get("paid_at"):
+                    last_issued_unpaid_entry = entry
+
+            # If we have a last paid EMI, and no "issued-but-unpaid"
+            if last_paid_entry and not last_issued_unpaid_entry:
+                try:
+                    # Find index of last paid entry
+                    idx = schedule_data.index(last_paid_entry)
+
+                    # Mark next EMI (if exists) for prepayment
+                    if idx + 1 < len(schedule_data):
+                        schedule_data[idx + 1]["available_for_pre_payment"] = True
+                except ValueError:
+                    pass
+
+        return {
+            "success": True,
+            "message": "emi_result fetched successfully!",
+            "status_code": status.HTTP_200_OK,
+            "data":  schedule_data,
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": "Failed to fetch invoices",
+            "status_code": 500,
+            "data": {"error": str(e)}
+        }
+        
+        
 @router.get("/get-closure-payment-link/{subscription_id}")
 def get_closure_payment_link(
     subscription_id: str,
@@ -723,36 +841,50 @@ def get_payment_details(payment_id: str, service: RazorpayService = Depends(get_
             "data": {"error": str(e)}
         }
         
-        
 @router.get("/get-pre-payment-link/{subscription_id}")
 def get_pre_payment_link(
     subscription_id: str,
     callback_url: str = Query(..., description="URL to redirect after payment"),
     is_due_payment: bool = Query(..., description="Checks if its Pre-Payment or Due-Payment"),
+    billing_start: int = Query(..., description="Invoice for Invocie"),
     service: RazorpayService = Depends(get_razorpay_service)
 ):
     try:
         # Step 1: Fetch subscription from Razorpay
         sub = service.fetch_subscription(subscription_id)
         if not sub:
-            return JSONResponse(
-                content={"success": False, "message": "Subscription not found", "data": {}},
-                status_code=status.HTTP_404_NOT_FOUND
-            )
+            return {
+                "success": False,
+                "message": "Subscription not found",
+                "status_code": status.HTTP_404_NOT_FOUND,
+                "data": {}
+            }
             
-        if sub.get("status") != "active":
-             return JSONResponse(
-                content={"success": False, "message": "The subscription status is not Active. To proceed with pre-payment, the subscription must be in Active status.", "data": {}},
-                status_code=status.HTTP_404_NOT_FOUND
-            )
+        if sub.get("status") != "active" and is_due_payment == False:
+            return {
+                "success": False,
+                "message": "The subscription status is not Active. To proceed with pre-payment, the subscription must be in Active status.",
+                "status_code": status.HTTP_404_NOT_FOUND,
+                "data": {}
+            }
+             
+        if sub.get("status") != "pending" and is_due_payment == True:
+            return {
+                "success": False,
+                "message": "To Pay The Due EMI the status of subscription needs to be PENDING.",
+                "status_code": status.HTTP_404_NOT_FOUND,
+                "data": {}
+            }
 
         # Step 2: Fetch plan from Razorpay
         plan = service.fetch_plan(sub['plan_id'])
         if not plan:
-            return JSONResponse(
-                content={"success": False, "message": "Plan not found", "data": {}},
-                status_code=status.HTTP_404_NOT_FOUND
-            )
+            return {
+                "success": False,
+                "message": "Plan not found",
+                "status_code": status.HTTP_404_NOT_FOUND,
+                "data": {}
+            }
 
         # Step 3: Fetch local subscription details with related entities
         filters = [
@@ -772,18 +904,22 @@ def get_pre_payment_link(
             )
 
             if not local_subscription:
-                return JSONResponse(
-                    content={"success": False, "message": "Subscription not found in DB", "data": {}},
-                    status_code=status.HTTP_404_NOT_FOUND
-                )
+                return {
+                    "success": False,
+                    "message": "Subscription not found in DB",
+                    "status_code": status.HTTP_404_NOT_FOUND,
+                    "data": {}
+                }
 
             # Access loan details
             loan = local_subscription.plan.applicant if local_subscription.plan else None
             if not loan or not loan.approval_details:
-                return JSONResponse(
-                    content={"success": False, "message": "No loan or approval details associated with this subscription", "data": {}},
-                    status_code=status.HTTP_400_BAD_REQUEST
-                )
+                return {
+                    "success": False,
+                    "message": "No loan or approval details associated with this subscription",
+                    "status_code": status.HTTP_400_BAD_REQUEST,
+                    "data": {}
+                }
 
             loan_approval_detail = loan.approval_details[0]
             user_accepted_amount = loan_approval_detail.user_accepted_amount
@@ -801,10 +937,12 @@ def get_pre_payment_link(
                 loan_type=loan.loan_type
             )
             if not emi_result:
-                return JSONResponse(
-                    content={"success": False, "message": "Failed to calculate EMI schedule", "data": {}},
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
+                return {
+                    "success": False,
+                    "message": "Failed to calculate EMI schedule",
+                    "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    "data": {}
+                }
 
         # Step 5: Fetch The Value for Next Payment
         required_sub_keys = ['paid_count', 'total_count', 'remaining_count']
@@ -817,9 +955,9 @@ def get_pre_payment_link(
         
         schedule = emi_result.get("data", {}).get("schedule", [])
         emi_amount_each_month = schedule[0].get("emi")
-        if paid_based_on_data == 0 : # User has not paid any EMI yet
+        if paid_based_on_data == 0:  # User has not paid any EMI yet
             emi_stepper = 1
-        else: # User
+        else:  # User
             emi_stepper = paid_based_on_data + 1
         # Step 6: Create unique reference ID and payment link
         ref_id = f"{sub['id']}+{int(time.time() * 1000)}"
@@ -832,7 +970,8 @@ def get_pre_payment_link(
                     description="pre_payment" if is_due_payment == False else "due_payment",
                     subscription_id=ref_id,
                     callback_url=callback_url,
-                    is_due_payment=is_due_payment
+                    is_due_payment=is_due_payment,
+                    billing_start=billing_start
                 )
                 if not payment:
                     raise ValueError("Failed to create payment link")
@@ -844,10 +983,12 @@ def get_pre_payment_link(
                         ref_id = f"{sub['id']}+{int(time.time() * 1000)}"  # Regenerate ref_id
                         continue
                     else:
-                        return JSONResponse(
-                            content={"success": False, "message": "Failed to create unique payment link after retries", "data": {}},
-                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-                        )
+                        return {
+                            "success": False,
+                            "message": "Failed to create unique payment link after retries",
+                            "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            "data": {}
+                        }
                 else:
                     raise  # Rethrow other exceptions
 
@@ -862,10 +1003,12 @@ def get_pre_payment_link(
         }
         prepayment_response = pre_payment_service.create_pre_payment(pre_payment_data)
         if not prepayment_response['success']:
-            return JSONResponse(
-                content=prepayment_response,
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return {
+                "success": False,
+                "message": prepayment_response,
+                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "data": {}
+            }
 
         payment_details_data = {
             "payment_id": payment['id'],
@@ -877,40 +1020,53 @@ def get_pre_payment_link(
         }
         payment_details_response = payment_details_service.create_payment_details(payment_details_data)
         if not payment_details_response['success']:
-            return JSONResponse(
-                content=payment_details_response,
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return {
+                "success": False,
+                "message": payment_details_response,
+                "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "data": {}
+            }
 
         # Step 8: Return success
-        return JSONResponse(
-            content={"success": True, "message": "Payment Link Created Successfully!", "data": {"payment": payment}},
-            status_code=status.HTTP_200_OK
-        )
+        return {
+            "success": True,
+            "message": "Payment Link Created Successfully!",
+            "status_code": status.HTTP_200_OK,
+            "data": {"payment": payment}
+        }
 
     except KeyError as ke:
-        return JSONResponse(
-            content={"success": False, "message": f"Key error: {str(ke)}", "data": {}},
-            status_code=status.HTTP_400_BAD_REQUEST
-        )
+        return {
+            "success": False,
+            "message": f"Key error: {str(ke)}",
+            "status_code": status.HTTP_400_BAD_REQUEST,
+            "data": {}
+        }
     except ValueError as ve:
-        return JSONResponse(
-            content={"success": False, "message": f"Value error: {str(ve)}", "data": {}},
-            status_code=status.HTTP_400_BAD_REQUEST
-        )
+        return {
+            "success": False,
+            "message": f"Value error: {str(ve)}",
+            "status_code": status.HTTP_400_BAD_REQUEST,
+            "data": {}
+        }
     except IndexError as ie:
-        return JSONResponse(
-            content={"success": False, "message": f"Index error: {str(ie)}", "data": {}},
-            status_code=status.HTTP_400_BAD_REQUEST
-        )
+        return {
+            "success": False,
+            "message": f"Index error: {str(ie)}",
+            "status_code": status.HTTP_400_BAD_REQUEST,
+            "data": {}
+        }
     except TypeError as te:
-        return JSONResponse(
-            content={"success": False, "message": f"Type error: {str(te)}", "data": {}},
-            status_code=status.HTTP_400_BAD_REQUEST
-        )
+        return {
+            "success": False,
+            "message": f"Type error: {str(te)}",
+            "status_code": status.HTTP_400_BAD_REQUEST,
+            "data": {}
+        }
     except Exception as e:
-        return JSONResponse(
-            content={"success": False, "message": "Internal Server Error", "data": {"error": str(e)}},
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-        
+        return {
+            "success": False,
+            "message": "Internal Server Error",
+            "status_code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "data": {"error": str(e)}
+        }

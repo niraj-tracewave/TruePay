@@ -24,6 +24,7 @@ class InvoiceCreateSchema(BaseModel):
     notes: Optional[str] = None
     invoice_data: Optional[dict] = None
     invoice_type: str
+    billing_start: int
 
 
 class InvoiceUpdateSchema(BaseModel):
@@ -44,6 +45,7 @@ class InvoiceUpdateSchema(BaseModel):
     notes: Optional[str] = None
     invoice_data: Optional[dict] = None
     invoice_type: str
+    billing_start: int
     
 
 
@@ -71,6 +73,8 @@ class InvoiceResponseSchema(BaseModel):
     modified_by: Optional[str]
     is_deleted: bool
     invoice_type: str
+    billing_start: int
+    
     
 
     class Config:
