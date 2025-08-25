@@ -79,18 +79,34 @@ class RazorpayService:
         # subscription_data["start_at"]= self.get_next_month_fifth_timestamp()
         return self.client.subscription.create(subscription_data)
     
-    def fetch_plan(self, plan_id: str) -> Dict:
+    def fetch_plan(self, plan_id: str):
         """
-        Fetch plan details
+        Fetch plan details by plan_id.
+        Returns None if fetch fails.
         """
-        return self.client.plan.fetch(plan_id)
+        if not plan_id:
+            raise ValueError("plan_id cannot be None or empty")
+        
+        try:
+            return self.client.plan.fetch(plan_id)
+        except Exception as e:
+            print(f"[RazorpayService][fetch_plan] Error: {e}")
+            return None
 
-    def fetch_subscription(self, subscription_id: str) -> Dict:
+    def fetch_subscription(self, subscription_id: str):
         """
-        Fetch subscription details
+        Fetch subscription details by subscription_id.
+        Returns None if fetch fails.
         """
-        return self.client.subscription.fetch(subscription_id)
+        if not subscription_id:
+            raise ValueError("subscription_id cannot be None or empty")
 
+        try:
+            return self.client.subscription.fetch(subscription_id)
+        except Exception as e:
+            print(f"[RazorpayService][fetch_subscription] Error: {e}")
+            return None
+        
     def cancel_subscription(self, subscription_id: str) -> Dict:
         """
         Cancel a subscription
