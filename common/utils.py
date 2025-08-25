@@ -412,6 +412,7 @@ def map_razorpay_invoice_to_db(invoice_json, emi_number: int, payment_detail_id:
         "status":invoice_json.get("status", "draft"),
         "emi_number":emi_number,
         "due_date":invoice_json.get("billing_end"),  # use Razorpay billing_end as due_date
+        "billing_start":invoice_json.get("billing_start"),  # use Razorpay billing_end as due_date
         "issued_at":invoice_json.get("issued_at"),
         "paid_at":invoice_json.get("paid_at"),
         'expired_at':invoice_json.get("expired_at"),
@@ -450,5 +451,6 @@ def map_payment_link_to_invoice_obj(payment: dict,
         "customer_notify": payment.get("notify", {}).get("email", True),
         "notes": str(payment.get("notes", {})),
         "invoice_data": payment,
-        "invoice_type": invoice_type
+        "invoice_type": invoice_type,
+        "billing_start" :payment.get("notes", {}).get("billing_start")
     }

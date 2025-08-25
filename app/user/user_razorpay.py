@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timedelta
+import datetime
 from fastapi import Request, Query
 from fastapi import APIRouter, Depends
 from starlette import status
@@ -437,7 +437,7 @@ def get_subscription_invoices(subscription_id: str, service: RazorpayService = D
                                                                                 emi_number=1,
                                                                                 payment_detail_id = pre_payments_payment_links.id,
                                                                                 subscription_id=subscription.id,
-                                                                                invoice_type="pre_payment" if pre_payments.is_due_payment == False else "due_payment"
+                                                                                invoice_type="pre_payment" if pre_payments.is_due_payment == False else "due_payment",
                                                                                 )
                     # Check for existing invoice
                     existing_invoice_1 = session.query(Invoice).filter_by(
@@ -729,6 +729,7 @@ def get_pre_payment_link(
     subscription_id: str,
     callback_url: str = Query(..., description="URL to redirect after payment"),
     is_due_payment: bool = Query(..., description="Checks if its Pre-Payment or Due-Payment"),
+    billing_start: int = Query(..., description="Invoice for Invocie"),
     service: RazorpayService = Depends(get_razorpay_service)
 ):
     try:
@@ -740,9 +741,15 @@ def get_pre_payment_link(
                 status_code=status.HTTP_404_NOT_FOUND
             )
             
-        if sub.get("status") != "active":
+        if sub.get("status") != "active" and is_due_payment == False:
              return JSONResponse(
                 content={"success": False, "message": "The subscription status is not Active. To proceed with pre-payment, the subscription must be in Active status.", "data": {}},
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+             
+        if sub.get("status") != "pending" and is_due_payment == True:
+             return JSONResponse(
+                content={"success": False, "message": "To Pay The Due EMI the status of subscription needs to be PENDING.", "data": {}},
                 status_code=status.HTTP_404_NOT_FOUND
             )
 
@@ -832,7 +839,8 @@ def get_pre_payment_link(
                     description="pre_payment" if is_due_payment == False else "due_payment",
                     subscription_id=ref_id,
                     callback_url=callback_url,
-                    is_due_payment=is_due_payment
+                    is_due_payment=is_due_payment,
+                    billing_start=billing_start
                 )
                 if not payment:
                     raise ValueError("Failed to create payment link")
