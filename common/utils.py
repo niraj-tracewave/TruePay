@@ -293,7 +293,8 @@ def calculate_emi_schedule(
                     "show_emi": round(emi, 0),
                     "status": "pending" if need_status else None,
                     "available_for_pre_payment": False,
-                    "paid_at": None
+                    "paid_at": None,
+                    "invoice_type": None
                 }
             )
 

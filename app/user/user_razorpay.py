@@ -533,7 +533,8 @@ def get_subscription_invoices(loan_application_id: str, service: RazorpayService
                 invoice_date_mapper.append({
                     f"{billing_start}": {
                                          "status": invoice.status,
-                                         "paid_at": unix_to_date(invoice.paid_at)
+                                         "paid_at": unix_to_date(invoice.paid_at),
+                                         "invoice_type": invoice.invoice_type
                                          }
                 })
             # Flatten invoice_date_mapper into a dictionary for quick lookup
@@ -544,7 +545,32 @@ def get_subscription_invoices(loan_application_id: str, service: RazorpayService
                 if entry["month"] in mapper:
                     entry["status"] = mapper[entry["month"]].get("status")
                     entry["paid_at"] = mapper[entry["month"]].get("paid_at")
-                    entry["available_for_pre_payment"] = mapper[entry["month"]].get("paid_at")
+                    entry["available_for_pre_payment"] = False
+                    entry["invoice_type"] =  mapper[entry["month"]].get("invoice_type")
+            
+            
+            #LOGIC:  available_for_pre_payment = True
+            last_paid_entry = None
+            last_issued_unpaid_entry = None
+
+            # Find last paid & last issued-but-unpaid
+            for entry in schedule_data:
+                if entry.get("status") == "paid" and entry.get("paid_at") is not None:
+                    last_paid_entry = entry
+                if entry.get("status") == "issued" and not entry.get("paid_at"):
+                    last_issued_unpaid_entry = entry
+
+            # If we have a last paid EMI, and no "issued-but-unpaid"
+            if last_paid_entry and not last_issued_unpaid_entry:
+                try:
+                    # Find index of last paid entry
+                    idx = schedule_data.index(last_paid_entry)
+
+                    # Mark next EMI (if exists) for prepayment
+                    if idx + 1 < len(schedule_data):
+                        schedule_data[idx + 1]["available_for_pre_payment"] = True
+                except ValueError:
+                    pass
 
         return {
             "success": True,
