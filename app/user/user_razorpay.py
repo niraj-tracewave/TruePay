@@ -464,7 +464,9 @@ def get_subscription_invoices(subscription_id: str, service: RazorpayService = D
             "success": True,
             "message": "Invoices fetched successfully!",
             "status_code": status.HTTP_200_OK,
-            "data": invoices
+            "data": {
+                     "transactions": invoices
+                     }
         }
     except Exception as e:
         return {
