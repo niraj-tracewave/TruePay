@@ -576,7 +576,7 @@ def get_subscription_invoices(loan_application_id: str, service: RazorpayService
 
         return {
             "success": True,
-            "message": "emi_result fetched successfully!",
+            "message": "Schedule data fetched successfully!",
             "status_code": status.HTTP_200_OK,
             "data":  {
                       "schedule_data": schedule_data
