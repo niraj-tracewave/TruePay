@@ -1,5 +1,5 @@
 import time
-import datetime
+from datetime import datetime
 from fastapi import Request, Query
 from fastapi import APIRouter, Depends
 from starlette import status
@@ -18,9 +18,12 @@ from services.razorpay_service import RazorpayService
 from services.invoice_service import InvoiceService
 from services.dependencies import get_razorpay_service
 from schemas.razorpay_schema import CreatePlanSchema, CreateSubscriptionSchema
-from common.utils import calculate_emi_schedule, map_razorpay_invoice_to_db, map_payment_link_to_invoice_obj
+from common.utils import (calculate_emi_schedule, map_razorpay_invoice_to_db, map_payment_link_to_invoice_obj, 
+                          get_effective_processing_fee, get_effective_rate, unix_to_date)
 from fastapi.responses import JSONResponse
 from db_domains.db_interface import DBInterface
+from common.cache_string import gettext
+from schemas.loan_schemas import LoanApplicantResponseSchema
 
 
 
@@ -471,6 +474,93 @@ def get_subscription_invoices(subscription_id: str, service: RazorpayService = D
             "data": {"error": str(e)}
         }
 
+@router.get("/get-schedule-data/{loan_application_id}")
+def get_subscription_invoices(loan_application_id: str, service: RazorpayService = Depends(get_razorpay_service), count: int = 10, skip: int = 0):
+    """
+    Fetch all invoices for a given subscription with optional pagination params.
+    """
+    try:
+        filters = [
+                LoanApplicant.id == loan_application_id,
+                LoanApplicant.is_deleted == False
+            ]
+        with DBSession() as session:
+            loan_with_docs = (
+                session.query(LoanApplicant)
+                .options(
+                     selectinload(LoanApplicant.documents),
+                        selectinload(LoanApplicant.bank_accounts),
+                        selectinload(LoanApplicant.approval_details),
+                    selectinload(LoanApplicant.credit_score_range_rate),
+                    selectinload(LoanApplicant.loan_disbursement),
+                    selectinload(LoanApplicant.loan_approved_document),
+                    selectinload(LoanApplicant.plans).selectinload(Plan.subscriptions).selectinload(Subscription.foreclosures).selectinload(ForeClosure.payment_details),
+                     selectinload(LoanApplicant.plans).selectinload(Plan.subscriptions).selectinload(Subscription.invoices).selectinload(Invoice.payment_details),
+                    )
+                .filter(*filters)
+                .first()
+            )
+            if not loan_with_docs:
+                return {
+                    "success": False,
+                    "message": gettext('not_found').format('Loan Application'),
+                    "status_code": status.HTTP_404_NOT_FOUND,
+                    "data": {}
+                }
+            emi_result = None                
+            effective_processing_fee = get_effective_processing_fee(loan_with_docs)
+            # loan_with_docs = loan_with_docs.__dict__.copy()
+            loan_response = LoanApplicantResponseSchema.model_validate(loan_with_docs).model_dump()
+            loan_response["effective_interest_rate"]= get_effective_rate(loan_with_docs)
+            
+            schedule_data = None
+            if loan_with_docs.approved_loan:
+                emi_result = calculate_emi_schedule(
+                    loan_amount=loan_with_docs.approved_loan,
+                    tenure_months=loan_with_docs.tenure_months,
+                    annual_interest_rate=loan_response["effective_interest_rate"],
+                    processing_fee=effective_processing_fee,
+                    is_fee_percentage=True,
+                    loan_type=loan_with_docs.loan_type,
+                    emi_start_day_atm=loan_with_docs.emi_start_day_atm,
+                    need_status=True
+                )
+
+                schedule_data = emi_result["data"].get("schedule")
+            invoice_date_mapper = []
+            for invoice in loan_with_docs.plans[0].subscriptions[0].invoices:
+                billing_start = unix_to_date(invoice.billing_start)
+                invoice_date_mapper.append({
+                    f"{billing_start}": {
+                                         "status": invoice.status,
+                                         "paid_at": unix_to_date(invoice.paid_at)
+                                         }
+                })
+            # Flatten invoice_date_mapper into a dictionary for quick lookup
+            mapper = {list(d.keys())[0]: list(d.values())[0] for d in invoice_date_mapper}
+
+            # Update schedule_data status
+            for entry in schedule_data:
+                if entry["month"] in mapper:
+                    entry["status"] = mapper[entry["month"]].get("status")
+                    entry["paid_at"] = mapper[entry["month"]].get("paid_at")
+                    entry["available_for_pre_payment"] = mapper[entry["month"]].get("paid_at")
+
+        return {
+            "success": True,
+            "message": "emi_result fetched successfully!",
+            "status_code": status.HTTP_200_OK,
+            "data":  schedule_data,
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": "Failed to fetch invoices",
+            "status_code": 500,
+            "data": {"error": str(e)}
+        }
+        
+        
 @router.get("/get-closure-payment-link/{subscription_id}")
 def get_closure_payment_link(
     subscription_id: str,

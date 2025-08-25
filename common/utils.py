@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from math import ceil
 from typing import Optional, List, Dict, Any
 
@@ -217,7 +217,7 @@ def calculate_emi(
 def calculate_emi_schedule(
         loan_amount: float, annual_interest_rate: float, tenure_months: int, processing_fee: float = 0.0,
         is_fee_percentage: bool = False, start_date: datetime = datetime.today(),
-        loan_type: str = None, emi_start_day_atm: int = None
+        loan_type: str = None, emi_start_day_atm: int = None, need_status: bool = False
 
 ) -> Dict[str, Any]:
     """
@@ -239,11 +239,11 @@ def calculate_emi_schedule(
                 "status_code": status.HTTP_400_BAD_REQUEST,
                 "data": {},
             }
-
-        if start_date.day >= 25:
-            current_month = (start_date.replace(day=1) + relativedelta(months=1))
-        else:
-            current_month = start_date.replace(day=1)
+        #NOTE:  Check This Out
+        # if start_date.day >= 25:
+        #     current_month = (start_date.replace(day=1) + relativedelta(months=1))
+        # else:
+        current_month = start_date.replace(day=1)
 
         # fee_amount = (loan_amount * (processing_fee / 100)) if is_fee_percentage else processing_fee
         total_principal = loan_amount
@@ -291,6 +291,9 @@ def calculate_emi_schedule(
                     "show_principal_paid": int(principal_paid),
                     "show_interest_paid": int(interest),
                     "show_emi": round(emi, 0),
+                    "status": "pending" if need_status else None,
+                    "available_for_pre_payment": False,
+                    "paid_at": None
                 }
             )
 
@@ -318,7 +321,8 @@ def calculate_emi_schedule(
             "success": False,
             "message": gettext("something_went_wrong"),
             "status_code": status.HTTP_400_BAD_REQUEST,
-            "data": {},
+            "data": {
+                "err": str(e)},
         }
 
 def unix_to_yyyy_mm_dd(unix_timestamp: int) -> Optional[str]:
@@ -454,3 +458,33 @@ def map_payment_link_to_invoice_obj(payment: dict,
         "invoice_type": invoice_type,
         "billing_start" :payment.get("notes", {}).get("billing_start")
     }
+    
+def get_effective_processing_fee(loan: LoanApplicant) -> float:
+    if loan.custom_processing_fee is not None:
+        return loan.custom_processing_fee
+    if loan.processing_fee_id:
+        return loan.processing_fee
+    return 0.0
+
+def get_effective_rate(loan) -> float:
+    if loan.custom_rate_percentage is not None:
+        return loan.custom_rate_percentage
+    if loan.credit_score_range_rate:
+        return loan.credit_score_range_rate.rate_percentage
+    return 0.0
+
+def unix_to_date(unix_timestamp) -> str:
+    """
+    Convert a Unix timestamp to IST date in 'D Mon YYYY' format.
+    
+    Args:
+        unix_timestamp (int): Unix timestamp in seconds.
+    
+    Returns:
+        str: Date in IST format like '5 Oct 2025'
+    """
+    if  isinstance(unix_timestamp, int):
+        dt_utc = datetime.fromtimestamp(unix_timestamp, tz=timezone.utc)
+        ist_time = dt_utc + timedelta(hours=5, minutes=30)
+        return ist_time.strftime("%-d %b %Y")  if isinstance(unix_timestamp, int) else None # On Windows use %#d instead of %-d
+    return None
